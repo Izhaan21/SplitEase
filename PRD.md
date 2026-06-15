@@ -148,7 +148,7 @@ Firestore data structure — for Dev 3
 groups/
   {groupId}/
     name: "Goa Trip"
-    members: ["Arjun", "Simran", "Raj"]
+    members: ["Nadeem", "Izhaan", "Arif"]
     createdBy: {userId}
     createdAt: timestamp
 
@@ -156,8 +156,8 @@ groups/
       {expenseId}/
         desc: "Hotel"
         amount: 3000
-        payer: "Arjun"
-        splitWith: ["Arjun", "Simran", "Raj"]
+        payer: "Nadeem"
+        splitWith: ["Nadeem", "Izhaan", "Arif"]
         perPerson: 1000
         date: timestamp
 ```
