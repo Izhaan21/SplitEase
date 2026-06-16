@@ -366,6 +366,7 @@
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <form onsubmit="handleCreateGroup(event)" novalidate>
+      <div id="group-modal-error" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:10px 14px;"></div>
       <div class="form-group">
         <label class="form-label" for="new-group-name">Group Name</label>
         <input class="form-input" type="text" id="new-group-name" placeholder="e.g. Goa Trip, Room Rent" required />
@@ -382,73 +383,8 @@
   </div>
 </div>
 
-<script>
-  /* ── Greeting ── */
-  (function setGreeting() {
-    const hour = new Date().getHours();
-    const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    document.getElementById('greeting-text').textContent = greet + ' 👋';
-  })();
-
-  /* ── Sidebar (mobile) ── */
-  function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('open'); }
-  function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
-
-  /* ── Modal ── */
-  function openModal(e)  { e.preventDefault(); document.getElementById('create-group-modal').classList.add('open'); }
-  function closeModal()  { document.getElementById('create-group-modal').classList.remove('open'); }
-
-  /* ── Create group (demo) ── */
-  function handleCreateGroup(e) {
-    e.preventDefault();
-    const name    = document.getElementById('new-group-name').value.trim();
-    const members = document.getElementById('new-group-members').value.split(',').map(m => m.trim()).filter(Boolean);
-    if (!name || members.length === 0) return alert('Please fill all fields.');
-
-    const grid = document.getElementById('groups-grid');
-    const card = document.createElement('div');
-    card.className = 'card card-hover group-card fade-up';
-    card.innerHTML = `
-      <div>
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
-          <h3 class="group-card-name">${name}</h3>
-          <span class="badge badge-pending">Active</span>
-        </div>
-        <div class="group-meta">
-          <div class="group-meta-row"><span class="label">Members</span><span class="value">${members.length} (${members.join(', ')})</span></div>
-          <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹0</span></div>
-          <div class="group-meta-row"><span class="label">Last Active</span><span class="value">Just now</span></div>
-        </div>
-      </div>
-      <div class="group-actions">
-        <button class="btn btn-secondary btn-sm btn-full">View Group</button>
-        <button class="btn btn-primary btn-sm btn-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
-      </div>`;
-    grid.prepend(card);
-
-    // Update counter
-    const counter = document.getElementById('groups-count');
-    counter.textContent = parseInt(counter.textContent) + 1;
-
-    closeModal();
-    document.getElementById('new-group-name').value = '';
-    document.getElementById('new-group-members').value = '';
-  }
-
-  /* ── Navigate to add expense with group pre-selected ── */
-  function goToAddExpense(group) {
-    sessionStorage.setItem('selectedGroup', group);
-    window.location.href = 'add-expense.html';
-  }
-
-  /* ── Search (stub) ── */
-  function handleSearch(val) {
-    // To be wired up by Dev 2 (Logic dev)
-    console.log('Search:', val);
-  }
-</script>
+<script src="js/balance.js"></script>
+<script src="js/dashboard.js"></script>
 
 </body>
 </html>

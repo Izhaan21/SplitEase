@@ -214,55 +214,7 @@
     </div><!-- /auth-card -->
   </div><!-- /auth-wrap -->
 
-  <script>
-    /* ── Tab switch ── */
-    function switchTab(tab) {
-      const errBox = document.getElementById('form-error');
-      errBox.classList.remove('show');
-
-      const isLogin = tab === 'login';
-      document.getElementById('tab-login').classList.toggle('active', isLogin);
-      document.getElementById('tab-register').classList.toggle('active', !isLogin);
-      document.getElementById('login-form').classList.toggle('active', isLogin);
-      document.getElementById('register-form').classList.toggle('active', !isLogin);
-      document.getElementById('auth-title').textContent = isLogin ? 'Welcome Back'  : 'Create Account';
-      document.getElementById('auth-sub').textContent   = isLogin
-        ? 'Sign in to manage group expenses'
-        : 'Start tracking expenses with your group';
-    }
-
-    /* ── Error helper ── */
-    function showError(msg) {
-      const box = document.getElementById('form-error');
-      box.textContent = msg;
-      box.classList.add('show');
-    }
-
-    /* ── Login handler (to be wired to Firebase Auth by Dev 3) ── */
-    function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value.trim();
-      const pass  = document.getElementById('login-pass').value;
-      if (!email || !pass) return showError('Please fill in all fields.');
-      // Firebase sign-in will go here
-      window.location.href = 'dashboard.html';
-    }
-
-    /* ── Register handler ── */
-    function handleRegister(e) {
-      e.preventDefault();
-      const pass    = document.getElementById('reg-pass').value;
-      const confirm = document.getElementById('reg-confirm').value;
-      if (pass !== confirm) return showError('Passwords do not match.');
-      if (pass.length < 6)  return showError('Password must be at least 6 characters.');
-      // Firebase createUserWithEmailAndPassword will go here
-      window.location.href = 'dashboard.html';
-    }
-
-    function guestLogin() {
-      window.location.href = 'dashboard.html';
-    }
-  </script>
+  <script src="js/auth.js"></script>
 
 </body>
 </html>

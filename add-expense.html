@@ -156,6 +156,9 @@
             placeholder="Any extra details about this expense…"></textarea>
         </div>
 
+        <!-- ── Error ── -->
+        <div class="form-error" id="expense-form-error"></div>
+
         <!-- ── Submit ── -->
         <div class="submit-row">
           <a href="dashboard.html" class="btn btn-secondary" style="flex:1;text-align:center;">
@@ -185,148 +188,7 @@
   <p>Expense added successfully!</p>
 </div>
 
-<script>
-  /* ── Group → Members map (to be replaced by real Firestore data) ── */
-  const GROUP_MEMBERS = {
-    goa:    ['Arif', 'Nadeem', 'Izhaan'],
-    room:   ['Arif', 'Nadeem'],
-    office: ['Arif', 'Izhaan', 'Nadeem'],
-  };
-
-  const AVATAR_COLORS = ['#22C55E', '#F59E0B', '#EF4444', '#6366F1', '#EC4899'];
-
-  /* ── Set today as default date ── */
-  (function setDefaultDate() {
-    const d = new Date();
-    document.getElementById('expense-date').value = d.toISOString().split('T')[0];
-  })();
-
-  /* ── Pre-select group from dashboard ── */
-  (function preSelect() {
-    const saved = sessionStorage.getItem('selectedGroup');
-    if (!saved) return;
-    const sel = document.getElementById('expense-group');
-    for (const opt of sel.options) {
-      if (opt.text === saved) { opt.selected = true; break; }
-    }
-    onGroupChange();
-  })();
-
-  /* ── When group changes: populate members & payer ── */
-  function onGroupChange() {
-    const group   = document.getElementById('expense-group').value;
-    const members = GROUP_MEMBERS[group] || [];
-
-    /* Payer dropdown */
-    const payer = document.getElementById('expense-payer');
-    payer.innerHTML = '<option value="" disabled selected>Who paid?</option>';
-    members.forEach(m => {
-      const opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      payer.appendChild(opt);
-    });
-
-    /* Member chips */
-    const grid = document.getElementById('members-grid');
-    grid.innerHTML = '';
-    members.forEach((m, i) => {
-      const label = document.createElement('label');
-      label.className = 'member-chip checked';
-      label.innerHTML = `
-        <input type="checkbox" name="member" value="${m}" checked onchange="onMemberToggle(this)" />
-        <div class="member-chip-avatar" style="background:${AVATAR_COLORS[i % AVATAR_COLORS.length]}">
-          ${m.charAt(0).toUpperCase()}
-        </div>
-        <span class="member-chip-name">${m}</span>
-        <span class="member-chip-check">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 6L9 17l-5-5"/>
-          </svg>
-        </span>`;
-      grid.appendChild(label);
-    });
-
-    updateSplitPreview();
-    /* Update step indicators */
-    document.getElementById('step-dot-1').classList.add('done');
-    document.getElementById('step-dot-2').classList.add('done');
-  }
-
-  /* ── Toggle chip style on checkbox change ── */
-  function onMemberToggle(checkbox) {
-    const chip = checkbox.closest('.member-chip');
-    chip.classList.toggle('checked', checkbox.checked);
-    updateSplitPreview();
-    document.getElementById('step-dot-3').classList.toggle('done', checkedMembers().length > 0);
-  }
-
-  /* ── Checked members ── */
-  function checkedMembers() {
-    return [...document.querySelectorAll('input[name="member"]:checked')].map(c => c.value);
-  }
-
-  /* ── Live per-person split preview ── */
-  function updateSplitPreview() {
-    const amount  = parseFloat(document.getElementById('expense-amount').value) || 0;
-    const members = checkedMembers();
-    const preview = document.getElementById('split-preview');
-
-    if (amount > 0 && members.length > 0) {
-      const each = (amount / members.length).toFixed(2);
-      document.getElementById('per-person-amount').textContent = `₹${each}`;
-      preview.style.display = 'flex';
-    } else {
-      preview.style.display = 'none';
-    }
-  }
-
-  /* ── Form submit ── */
-  function handleSubmit(e) {
-    e.preventDefault();
-
-    const group   = document.getElementById('expense-group').value;
-    const name    = document.getElementById('expense-name').value.trim();
-    const amount  = parseFloat(document.getElementById('expense-amount').value);
-    const payer   = document.getElementById('expense-payer').value;
-    const date    = document.getElementById('expense-date').value;
-    const members = checkedMembers();
-
-    if (!group)           return alert('Please select a group.');
-    if (!name)            return alert('Please enter an expense name.');
-    if (!amount || amount <= 0) return alert('Please enter a valid amount.');
-    if (!payer)           return alert('Please select who paid.');
-    if (members.length === 0)   return alert('Please select at least one member to split with.');
-
-    /* Build expense object (to be saved to Firestore by Dev 3) */
-    const expense = {
-      group,
-      desc:       name,
-      amount,
-      payer,
-      splitWith:  members,
-      perPerson:  +(amount / members.length).toFixed(2),
-      category:   document.getElementById('expense-category').value,
-      notes:      document.getElementById('expense-notes').value.trim(),
-      date,
-      createdAt:  new Date().toISOString(),
-    };
-
-    console.log('Expense to save:', expense);
-
-    /* Mark step 4 done */
-    document.getElementById('step-dot-4').classList.add('done');
-
-    /* Show toast */
-    const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => {
-      toast.classList.remove('show');
-      sessionStorage.removeItem('selectedGroup');
-      window.location.href = 'dashboard.html';
-    }, 2000);
-  }
-</script>
+<script src="js/expense.js"></script>
 
 </body>
 </html>
