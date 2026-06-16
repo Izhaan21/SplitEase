@@ -1,0 +1,195 @@
+/* ============================================================
+   ADD EXPENSE PAGE — SplitEase
+   ============================================================ */
+
+.expense-page {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background:
+    radial-gradient(ellipse at 80% 0%, rgba(34,197,94,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 100%, rgba(245,158,11,0.04) 0%, transparent 50%),
+    var(--bg-primary);
+}
+
+/* ── Layout: narrow left col + wide form ── */
+.expense-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 28px;
+  width: 100%;
+  max-width: 900px;
+}
+
+/* ── Back nav ── */
+.back-nav {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--muted-gray); font-size: 13px; font-weight: 500;
+  text-decoration: none; margin-bottom: 20px;
+  transition: color var(--transition);
+}
+.back-nav:hover { color: var(--primary-green); }
+
+/* ── Info sidebar (left) ── */
+.expense-info-card {
+  position: sticky; top: 40px;
+}
+
+.expense-info-card h2 { font-size: 20px; margin-bottom: 6px; }
+.expense-info-card p  { font-size: 13px; color: var(--muted-gray); margin-bottom: 28px; line-height: 1.6; }
+
+.info-steps { display: flex; flex-direction: column; gap: 16px; }
+
+.info-step {
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.step-dot {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  background: rgba(34,197,94,0.12); color: var(--primary-green);
+}
+.step-dot.done { background: var(--primary-green); color: var(--bg-primary); }
+.step-text { display: flex; flex-direction: column; }
+.step-text strong { font-size: 13px; color: var(--white); font-weight: 600; }
+.step-text small  { font-size: 12px; color: var(--muted-gray); margin-top: 2px; }
+
+/* ── Form card (right) ── */
+.expense-form-card { }
+
+.expense-form-card h2 {
+  font-size: 22px; margin-bottom: 6px;
+}
+.expense-form-card > p {
+  color: var(--muted-gray); font-size: 13px; margin-bottom: 28px;
+}
+
+/* Amount field — large prominent number ── */
+.amount-field-wrap {
+  position: relative; margin-bottom: 20px;
+}
+.amount-prefix {
+  position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  font-size: 22px; font-weight: 700; color: var(--primary-green);
+  pointer-events: none; line-height: 1;
+}
+.form-input-amount {
+  width: 100%; height: 64px;
+  padding-left: 46px; padding-right: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--white); font-size: 26px; font-weight: 700;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-input-amount::placeholder { color: var(--border); font-size: 26px; }
+.form-input-amount:focus {
+  border-color: var(--primary-green);
+  box-shadow: var(--shadow-glow-green);
+}
+
+/* Two-column row ── */
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Members checklist ── */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.member-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  user-select: none;
+}
+.member-chip:hover { background: var(--bg-hover); }
+.member-chip input[type="checkbox"] { display: none; }
+
+.member-chip-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--bg-primary);
+  flex-shrink: 0;
+}
+.member-chip-name { font-size: 13px; font-weight: 500; color: var(--light-gray); flex: 1; }
+
+.member-chip-check {
+  width: 18px; height: 18px; border-radius: 4px;
+  border: 2px solid var(--muted-gray);
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+}
+
+.member-chip.checked {
+  background: rgba(34,197,94,0.08);
+  border-color: var(--primary-green);
+}
+.member-chip.checked .member-chip-check {
+  background: var(--primary-green);
+  border-color: var(--primary-green);
+}
+.member-chip.checked .member-chip-name { color: var(--white); }
+
+/* Per-person preview ── */
+.split-preview {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(34,197,94,0.06);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--radius-md);
+  margin-top: 12px;
+}
+.split-preview p  { font-size: 13px; color: var(--light-gray); }
+.split-preview strong { color: var(--primary-green); font-size: 16px; font-weight: 700; }
+
+/* Divider ── */
+.form-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+
+/* Submit row ── */
+.submit-row {
+  display: flex; gap: 12px; margin-top: 8px;
+}
+
+/* ── Success toast ── */
+.toast {
+  position: fixed; bottom: 30px; right: 30px;
+  background: var(--bg-card);
+  border: 1px solid var(--primary-green);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: var(--shadow-lg), var(--shadow-glow-green);
+  transform: translateY(80px); opacity: 0;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  z-index: 999;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-icon { color: var(--primary-green); }
+.toast p { font-size: 14px; font-weight: 500; color: var(--white); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .expense-page { padding: 20px 16px; align-items: flex-start; }
+  .expense-layout { grid-template-columns: 1fr; }
+  .expense-info-card { position: static; }
+  .form-row-2 { grid-template-columns: 1fr; }
+  .submit-row { flex-direction: column; }
+}
