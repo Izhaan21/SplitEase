@@ -1,3 +1,13 @@
+import { auth, db } from "./firebase.js";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+
 /* ============================================================
    auth.js  —  SplitEase  |  dev-logic
    Handles: form validation, tab switching, error display
@@ -67,7 +77,6 @@ function setLoading(btnId, isLoading, defaultText) {
 
 /**
  * Validates login form inputs.
- * TODO (Dev 3): Replace the redirect with Firebase signInWithEmailAndPassword()
  * @param {Event} e
  */
 function handleLogin(e) {
@@ -84,24 +93,23 @@ function handleLogin(e) {
   if (!pass)           return showError('Please enter your password.');
   if (pass.length < 6) return showError('Password must be at least 6 characters.');
 
-  // ── TODO: Dev 3 replaces this block with Firebase Auth ──
-  // import { signInWithEmailAndPassword } from "firebase/auth";
-  // signInWithEmailAndPassword(auth, email, pass)
-  //   .then(userCredential => { window.location.href = 'dashboard.html'; })
-  //   .catch(err => showError(mapFirebaseError(err.code)));
-
   setLoading('btn-login', true, 'Sign In');
-  // Simulated delay for demo (remove once Firebase is wired)
-  setTimeout(() => {
-    window.location.href = 'dashboard.html';
-  }, 800);
+  sessionStorage.removeItem('isGuest');
+
+  signInWithEmailAndPassword(auth, email, pass)
+    .then(userCredential => {
+      window.location.href = 'dashboard.html';
+    })
+    .catch(err => {
+      setLoading('btn-login', false, 'Sign In');
+      showError(mapFirebaseError(err.code));
+    });
 }
 
 // ── Register Handler ──────────────────────────────────────────
 
 /**
  * Validates registration form inputs.
- * TODO (Dev 3): Replace redirect with Firebase createUserWithEmailAndPassword()
  * @param {Event} e
  */
 function handleRegister(e) {
@@ -122,17 +130,28 @@ function handleRegister(e) {
   if (pass.length < 6)      return showError('Password must be at least 6 characters.');
   if (pass !== confirm)     return showError('Passwords do not match. Please try again.');
 
-  // ── TODO: Dev 3 replaces this block with Firebase Auth ──
-  // import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-  // createUserWithEmailAndPassword(auth, email, pass)
-  //   .then(userCredential => updateProfile(userCredential.user, { displayName: name }))
-  //   .then(() => { window.location.href = 'dashboard.html'; })
-  //   .catch(err => showError(mapFirebaseError(err.code)));
-
   setLoading('btn-register', true, 'Create Account');
-  setTimeout(() => {
-    window.location.href = 'dashboard.html';
-  }, 800);
+  sessionStorage.removeItem('isGuest');
+
+  createUserWithEmailAndPassword(auth, email, pass)
+    .then(userCredential => {
+      return updateProfile(userCredential.user, { displayName: name })
+        .then(() => {
+          // Write to users collection
+          return setDoc(doc(db, "users", userCredential.user.uid), {
+            name: name,
+            email: email,
+            createdAt: new Date().toISOString()
+          });
+        });
+    })
+    .then(() => {
+      window.location.href = 'dashboard.html';
+    })
+    .catch(err => {
+      setLoading('btn-register', false, 'Create Account');
+      showError(mapFirebaseError(err.code));
+    });
 }
 
 // ── Guest Login ───────────────────────────────────────────────
@@ -174,6 +193,45 @@ function mapFirebaseError(code) {
     'auth/too-many-requests':   'Too many attempts. Please wait and try again.',
     'auth/network-request-failed': 'Network error. Check your connection.',
     'auth/invalid-email':       'Invalid email address.',
+    'auth/invalid-credential':  'Invalid email or password.',
   };
   return map[code] || 'Something went wrong. Please try again.';
 }
+
+// ── Google Sign-In ───────────────────────────────────────────
+
+/**
+ * Signs the user in with their Google account using a popup.
+ * Creates a Firestore user profile on first sign-in.
+ * Dev 1: Hook this up to your Google button — onclick="window.googleLogin()"
+ */
+function googleLogin() {
+  const provider = new GoogleAuthProvider();
+
+  signInWithPopup(auth, provider)
+    .then(result => {
+      const user = result.user;
+
+      // Write to Firestore users collection (safe to overwrite with merge)
+      return setDoc(doc(db, "users", user.uid), {
+        name:      user.displayName  || 'Anonymous',
+        email:     user.email        || '',
+        photoURL:  user.photoURL     || '',
+        createdAt: new Date().toISOString(),
+      }, { merge: true });
+    })
+    .then(() => {
+      sessionStorage.removeItem('isGuest');
+      window.location.href = 'dashboard.html';
+    })
+    .catch(err => {
+      showError(mapFirebaseError(err.code));
+    });
+}
+
+// Expose handlers globally for HTML inline event attributes
+window.switchTab     = switchTab;
+window.handleLogin   = handleLogin;
+window.handleRegister = handleRegister;
+window.guestLogin    = guestLogin;
+window.googleLogin   = googleLogin; // ← Dev 1 uses this for the Google button
