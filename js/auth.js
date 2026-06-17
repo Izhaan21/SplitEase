@@ -225,6 +225,7 @@ function googleLogin() {
       window.location.href = 'dashboard.html';
     })
     .catch(err => {
+      console.error("Google sign-in error details:", err);
       showError(mapFirebaseError(err.code));
     });
 }
