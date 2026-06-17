@@ -158,6 +158,21 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
   color: var(--white);
 }
 
+.btn-google {
+  background-color: transparent;
+  color: var(--white);
+  border: 1px solid var(--border);
+  gap: 12px;
+}
+.btn-google:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--light-gray);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+}
+.btn-google svg {
+  flex-shrink: 0;
+}
+
 .btn-full { width: 100%; }
 .btn-sm { height: 38px; padding: 0 16px; font-size: 13px; border-radius: var(--radius-sm); }
 .btn-icon { width: 40px; height: 40px; padding: 0; }

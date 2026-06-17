@@ -185,7 +185,77 @@
 .toast-icon { color: var(--primary-green); }
 .toast p { font-size: 14px; font-weight: 500; color: var(--white); }
 
+/* ── Category / Mood Selector tiles ── */
+.category-picker-group { margin-bottom: 4px; }
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.category-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 6px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform 0.15s ease,
+    box-shadow var(--transition);
+  user-select: none;
+}
+
+.category-tile:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+
+.cat-emoji {
+  font-size: 20px;
+  line-height: 1;
+  display: block;
+  transition: transform 0.2s ease;
+}
+.category-tile:hover .cat-emoji { transform: scale(1.15); }
+
+.cat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted-gray);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  transition: color var(--transition);
+}
+
+/* ── Active / selected state ── */
+.category-tile.active {
+  background: rgba(34,197,94,0.10);
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.15);
+  transform: translateY(-2px);
+}
+.category-tile.active .cat-label { color: var(--primary-green); }
+.category-tile.active .cat-emoji { transform: scale(1.12); }
+
+/* ── Responsive: collapse to 4-col on small screens ── */
+@media (max-width: 500px) {
+  .category-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 /* ── Responsive ── */
+
 @media (max-width: 768px) {
   .expense-page { padding: 20px 16px; align-items: flex-start; }
   .expense-layout { grid-template-columns: 1fr; }
