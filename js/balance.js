@@ -1,5 +1,6 @@
 /* ============================================================
    balance.js  —  SplitEase  |  dev-logic
+   DAY 3 — Nadeem (dev-logic)
    Handles: balance calculation, debt simplification,
             balance summary rendering on dashboard
    ============================================================ */
@@ -253,6 +254,23 @@ function renderBalanceSummary(transactions, currentUser) {
   }
 }
 
+// ── Group Balance Summary (convenience wrapper) ──────────────
+
+/**
+ * One-shot helper: given a full group object, return
+ * net balances, simplified transactions, and per-user summary.
+ *
+ * @param {Object} group  - { members: string[], expenses: Expense[] }
+ * @param {string} currentUser
+ * @returns {{ balances: Object, transactions: Transaction[], summary: { owes: Transaction[], owed: Transaction[] } }}
+ */
+function getGroupBalanceSummary(group, currentUser) {
+  const balances     = computeNetBalances(group.expenses || [], group.members || []);
+  const transactions = simplifyDebts(balances);
+  const summary      = getUserSummary(transactions, currentUser);
+  return { balances, transactions, summary };
+}
+
 // ── Exports (used by dashboard.js and expense.js) ─────────────
 export {
   computeNetBalances,
@@ -261,5 +279,6 @@ export {
   totalExpenses,
   totalPaidBy,
   totalOwedBy,
-  renderBalanceSummary
+  renderBalanceSummary,
+  getGroupBalanceSummary
 };

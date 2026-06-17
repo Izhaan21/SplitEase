@@ -13,7 +13,8 @@ import {
 } from "firebase/firestore";
 
 /* ============================================================
-   expense.js  —  SplitEase  |  dev-firebase
+   expense.js  —  SplitEase  |  dev-logic
+   DAY 3 — Nadeem (dev-logic)
    Handles: group selection, member chips, split preview,
             form validation, expense object construction,
             real-time Firestore group fetching and expense writing
