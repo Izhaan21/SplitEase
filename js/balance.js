@@ -43,11 +43,42 @@
  * @property {number} amount  - How much
  */
 
+// ── Utility: Currency Formatter ───────────────────────────────
+
+/**
+ * Formats a number as Indian Rupee string.
+ * e.g. 1500 → "₹1,500"   |   1500.5 → "₹1,500.50"
+ *
+ * @param {number} amount
+ * @returns {string}
+ */
+function formatINR(amount) {
+  const abs = Math.abs(amount);
+  const formatted = abs % 1 === 0
+    ? abs.toLocaleString('en-IN')
+    : abs.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `₹${formatted}`;
+}
+
+/**
+ * Safe rounding to avoid floating-point drift (e.g. 0.1 + 0.2 = 0.30000000000000004).
+ * @param {number} n
+ * @returns {number}
+ */
+function round2(n) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 // ── Core Balance Calculator ───────────────────────────────────
 
 /**
  * Given a list of expenses and all group members, compute
  * each member's net balance (positive = is owed, negative = owes).
+ *
+ * Handles edge cases:
+ *  - Payer not in splitWith (they paid for others but aren't sharing)
+ *  - Unknown payer/members (skipped gracefully)
+ *  - Empty expense list (returns all zeros)
  *
  * @param {Expense[]} expenses
  * @param {string[]}  members
@@ -60,39 +91,50 @@ function computeNetBalances(expenses, members) {
 
   expenses.forEach(exp => {
     const { payer, amount, splitWith } = exp;
+
+    // Skip invalid expenses
+    if (!payer || !amount || amount <= 0) return;
     if (!splitWith || splitWith.length === 0) return;
 
-    const share = amount / splitWith.length;
+    const share = round2(amount / splitWith.length);
 
-    // Payer is credited the full amount they put in
+    // Credit the payer the full amount they fronted
     if (balances[payer] !== undefined) {
-      balances[payer] += amount;
+      balances[payer] = round2(balances[payer] + amount);
     }
 
-    // Each person who split is debited their share
+    // Debit each person in the split their share
     splitWith.forEach(member => {
       if (balances[member] !== undefined) {
-        balances[member] -= share;
+        balances[member] = round2(balances[member] - share);
       }
     });
-  });
-
-  // Round to 2 decimal places
-  Object.keys(balances).forEach(m => {
-    balances[m] = +balances[m].toFixed(2);
   });
 
   return balances;
 }
 
 /**
- * Simplify debts using a greedy algorithm.
+ * Checks if a group is fully settled (all balances are effectively zero).
+ *
+ * @param {Object.<string, number>} balances
+ * @returns {boolean}
+ */
+function isGroupSettled(balances) {
+  return Object.values(balances).every(v => Math.abs(v) < 0.01);
+}
+
+/**
+ * Simplify debts using a greedy two-pointer algorithm.
  * Minimises the number of transactions needed to settle all balances.
  *
  * @param {Object.<string, number>} balances
  * @returns {Transaction[]}
  */
 function simplifyDebts(balances) {
+  // Nothing to do if everyone is settled
+  if (isGroupSettled(balances)) return [];
+
   // Separate into creditors (owed money) and debtors (owe money)
   const creditors = [];
   const debtors   = [];
@@ -102,26 +144,28 @@ function simplifyDebts(balances) {
     else if (amount < -0.01) debtors.push({ name, amount: -amount }); // store as positive
   });
 
-  // Sort descending by amount for greedy matching
+  // Sort largest first for greedy matching (fewer transactions)
   creditors.sort((a, b) => b.amount - a.amount);
   debtors.sort((a, b) => b.amount - a.amount);
 
   const transactions = [];
-
   let i = 0, j = 0;
+
   while (i < creditors.length && j < debtors.length) {
     const credit = creditors[i];
     const debt   = debtors[j];
-    const settle = Math.min(credit.amount, debt.amount);
+    const settle = round2(Math.min(credit.amount, debt.amount));
 
-    transactions.push({
-      from:   debt.name,
-      to:     credit.name,
-      amount: +settle.toFixed(2),
-    });
+    if (settle > 0.01) {
+      transactions.push({
+        from:   debt.name,
+        to:     credit.name,
+        amount: settle,
+      });
+    }
 
-    credit.amount -= settle;
-    debt.amount   -= settle;
+    credit.amount = round2(credit.amount - settle);
+    debt.amount   = round2(debt.amount   - settle);
 
     if (credit.amount < 0.01) i++;
     if (debt.amount   < 0.01) j++;
@@ -130,11 +174,10 @@ function simplifyDebts(balances) {
   return transactions;
 }
 
-// ── Summary for a single user ─────────────────────────────────
+// ── User-specific Summaries ───────────────────────────────────
 
 /**
  * Given simplified transactions, filter those relevant to a specific user.
- * Returns what the user owes others and what others owe the user.
  *
  * @param {Transaction[]} transactions
  * @param {string}        currentUser
@@ -146,14 +189,44 @@ function getUserSummary(transactions, currentUser) {
   return { owes, owed };
 }
 
-// ── Total calculators ─────────────────────────────────────────
+/**
+ * Total amount a user owes (across all provided transactions).
+ *
+ * @param {Transaction[]} transactions
+ * @param {string}        member
+ * @returns {number}
+ */
+function totalOwedBy(transactions, member) {
+  return round2(
+    transactions
+      .filter(t => t.from === member)
+      .reduce((sum, t) => sum + t.amount, 0)
+  );
+}
+
+/**
+ * Total amount others owe this user.
+ *
+ * @param {Transaction[]} transactions
+ * @param {string}        member
+ * @returns {number}
+ */
+function totalOwedTo(transactions, member) {
+  return round2(
+    transactions
+      .filter(t => t.to === member)
+      .reduce((sum, t) => sum + t.amount, 0)
+  );
+}
+
+// ── Expense Aggregators ────────────────────────────────────────
 
 /**
  * @param {Expense[]} expenses
  * @returns {number} Sum of all expense amounts
  */
 function totalExpenses(expenses) {
-  return +expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2);
+  return round2(expenses.reduce((sum, e) => sum + (e.amount || 0), 0));
 }
 
 /**
@@ -162,29 +235,88 @@ function totalExpenses(expenses) {
  * @returns {number} Total amount paid by this member
  */
 function totalPaidBy(expenses, member) {
-  return +expenses
-    .filter(e => e.payer === member)
-    .reduce((sum, e) => sum + e.amount, 0)
-    .toFixed(2);
+  return round2(
+    expenses
+      .filter(e => e.payer === member)
+      .reduce((sum, e) => sum + e.amount, 0)
+  );
 }
 
 /**
- * @param {Transaction[]} transactions
- * @param {string}        member
- * @returns {number} Total this member owes across all transactions
+ * Returns a per-category spending breakdown for an expense list.
+ *
+ * @param {Expense[]} expenses
+ * @returns {Object.<string, number>}  e.g. { food: 1500, transport: 800 }
  */
-function totalOwedBy(transactions, member) {
-  return +transactions
-    .filter(t => t.from === member)
-    .reduce((sum, t) => sum + t.amount, 0)
-    .toFixed(2);
+function categoryBreakdown(expenses) {
+  const breakdown = {};
+  expenses.forEach(e => {
+    const cat = e.category || 'other';
+    breakdown[cat] = round2((breakdown[cat] || 0) + e.amount);
+  });
+  return breakdown;
+}
+
+// ── Group Balance Summary (convenience wrapper) ──────────────
+
+/**
+ * One-shot helper: given a full group object, returns a complete
+ * balance picture — net balances, simplified transactions,
+ * per-user summary, settled status and totals.
+ *
+ * @param {Object} group        - { members: string[], expenses: Expense[] }
+ * @param {string} currentUser
+ * @returns {{
+ *   balances:     Object.<string, number>,
+ *   transactions: Transaction[],
+ *   summary:      { owes: Transaction[], owed: Transaction[] },
+ *   settled:      boolean,
+ *   youOwe:       number,
+ *   youAreOwed:   number
+ * }}
+ */
+function getGroupBalanceSummary(group, currentUser) {
+  const balances     = computeNetBalances(group.expenses || [], group.members || []);
+  const transactions = simplifyDebts(balances);
+  const summary      = getUserSummary(transactions, currentUser);
+  const settled      = isGroupSettled(balances);
+  const youOwe       = totalOwedBy(transactions, currentUser);
+  const youAreOwed   = totalOwedTo(transactions, currentUser);
+
+  return { balances, transactions, summary, settled, youOwe, youAreOwed };
 }
 
 // ── Dashboard Balance Renderer ────────────────────────────────
 
+const AVATAR_COLORS = ['#F59E0B', '#22C55E', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
+
+/**
+ * Builds a single balance row element.
+ * @param {'owe'|'owed'} type
+ * @param {Transaction} t
+ * @param {string} color
+ * @returns {string} HTML string
+ */
+function buildBalanceRow(type, t, color) {
+  const isOwe   = type === 'owe';
+  const name    = isOwe ? t.to   : t.from;
+  const label   = isOwe ? `You owe <strong>${name}</strong>` : `<strong>${name}</strong> owes you`;
+  const cls     = isOwe ? 'text-red'   : 'text-green';
+  const prefix  = isOwe ? '−' : '+';
+
+  return `
+    <div class="balance-row">
+      <div class="balance-who">
+        <div class="avatar-sm" style="background:${color}">${name.charAt(0).toUpperCase()}</div>
+        <div class="balance-info"><p>${label}</p></div>
+      </div>
+      <span class="balance-amount ${cls}">${prefix}${formatINR(t.amount)}</span>
+    </div>`;
+}
+
 /**
  * Renders the balance summary section on the dashboard.
- * Replaces the static HTML with real computed data.
+ * Shows net totals bar + individual rows + smart settle tip.
  *
  * @param {Transaction[]} transactions
  * @param {string}        currentUser
@@ -195,90 +327,76 @@ function renderBalanceSummary(transactions, currentUser) {
   if (!listEl) return;
 
   const { owes, owed } = getUserSummary(transactions, currentUser);
+  const youOwe       = totalOwedBy(transactions, currentUser);
+  const youAreOwed   = totalOwedTo(transactions, currentUser);
+  const netBalance   = round2(youAreOwed - youOwe);
+
   listEl.innerHTML = '';
 
+  // ── Fully settled state ──
   if (owes.length === 0 && owed.length === 0) {
     listEl.innerHTML = `
       <div style="text-align:center;padding:24px 0;color:var(--primary-green);">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          style="margin-bottom:10px;display:block;margin-inline:auto;">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
           <polyline points="22 4 12 14.01 9 11.01"/>
         </svg>
-        <p style="font-weight:600;">You're all settled up! 🎉</p>
+        <p style="font-weight:700;font-size:15px;">You're all settled up! 🎉</p>
+        <p style="font-size:12px;color:var(--muted-gray);margin-top:4px;">No pending balances.</p>
       </div>`;
-    if (tipEl) tipEl.closest('.settle-tip').style.display = 'none';
+    if (tipEl) tipEl.closest('.settle-tip') && (tipEl.closest('.settle-tip').style.display = 'none');
     return;
   }
 
-  const AVATAR_COLORS = ['#F59E0B', '#22C55E', '#EF4444', '#6366F1', '#EC4899'];
+  // ── Net balance summary bar ──
+  const barColor  = netBalance >= 0 ? 'var(--primary-green)' : '#EF4444';
+  const barLabel  = netBalance >= 0
+    ? `Net: you are owed <strong style="color:var(--primary-green)">${formatINR(netBalance)}</strong>`
+    : `Net: you owe <strong style="color:#EF4444">${formatINR(Math.abs(netBalance))}</strong>`;
+
+  listEl.innerHTML = `
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
+                padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--light-gray);">
+      ${barLabel}
+    </div>`;
+
+  // ── What you owe ──
   let colorIdx = 0;
-
-  // Render debts (what you owe)
   owes.forEach(t => {
-    const color = AVATAR_COLORS[colorIdx++ % AVATAR_COLORS.length];
-    listEl.innerHTML += `
-      <div class="balance-row">
-        <div class="balance-who">
-          <div class="avatar-sm" style="background:${color}">${t.to.charAt(0)}</div>
-          <div class="balance-info">
-            <p>You owe <strong>${t.to}</strong></p>
-          </div>
-        </div>
-        <span class="balance-amount text-red">₹${t.amount.toLocaleString('en-IN')}</span>
-      </div>`;
+    listEl.innerHTML += buildBalanceRow('owe', t, AVATAR_COLORS[colorIdx++ % AVATAR_COLORS.length]);
   });
 
-  // Render credits (what others owe you)
+  // ── What others owe you ──
   owed.forEach(t => {
-    const color = AVATAR_COLORS[colorIdx++ % AVATAR_COLORS.length];
-    listEl.innerHTML += `
-      <div class="balance-row">
-        <div class="balance-who">
-          <div class="avatar-sm" style="background:${color}">${t.from.charAt(0)}</div>
-          <div class="balance-info">
-            <p><strong>${t.from}</strong> owes you</p>
-          </div>
-        </div>
-        <span class="balance-amount text-green">₹${t.amount.toLocaleString('en-IN')}</span>
-      </div>`;
+    listEl.innerHTML += buildBalanceRow('owed', t, AVATAR_COLORS[colorIdx++ % AVATAR_COLORS.length]);
   });
 
-  // Smart suggestion tip
+  // ── Smart settle tip ──
   if (tipEl && transactions.length > 0) {
     const tips = transactions
-      .map(t => `<strong>${t.from}</strong> pays <strong>${t.to}</strong> ₹${t.amount.toLocaleString('en-IN')}`)
-      .join(' · ');
-    tipEl.innerHTML = `Simplest way to settle: ${tips}.`;
-    tipEl.closest('.settle-tip').style.display = '';
+      .map(t => `<strong>${t.from}</strong> → <strong>${t.to}</strong> ${formatINR(t.amount)}`)
+      .join(' &nbsp;·&nbsp; ');
+    tipEl.innerHTML = `Quickest way to settle up: ${tips}`;
+    const tipContainer = tipEl.closest('.settle-tip');
+    if (tipContainer) tipContainer.style.display = '';
   }
 }
 
-// ── Group Balance Summary (convenience wrapper) ──────────────
-
-/**
- * One-shot helper: given a full group object, return
- * net balances, simplified transactions, and per-user summary.
- *
- * @param {Object} group  - { members: string[], expenses: Expense[] }
- * @param {string} currentUser
- * @returns {{ balances: Object, transactions: Transaction[], summary: { owes: Transaction[], owed: Transaction[] } }}
- */
-function getGroupBalanceSummary(group, currentUser) {
-  const balances     = computeNetBalances(group.expenses || [], group.members || []);
-  const transactions = simplifyDebts(balances);
-  const summary      = getUserSummary(transactions, currentUser);
-  return { balances, transactions, summary };
-}
-
-// ── Exports (used by dashboard.js and expense.js) ─────────────
+// ── Exports ───────────────────────────────────────────────────
 export {
+  formatINR,
+  round2,
   computeNetBalances,
+  isGroupSettled,
   simplifyDebts,
   getUserSummary,
   totalExpenses,
   totalPaidBy,
   totalOwedBy,
+  totalOwedTo,
+  categoryBreakdown,
+  getGroupBalanceSummary,
   renderBalanceSummary,
-  getGroupBalanceSummary
 };

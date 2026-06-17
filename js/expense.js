@@ -155,69 +155,131 @@ function updateSplitPreview() {
   }
 }
 
-// ── Form Validation ───────────────────────────────────────────
+// ── Auto Category Detection ──────────────────────────────────
 
-function validateExpenseForm() {
-  const group   = document.getElementById('expense-group').value;
-  const name    = document.getElementById('expense-name').value.trim();
-  const amountRaw = document.getElementById('expense-amount').value;
-  const amount  = parseFloat(amountRaw);
-  const payer   = document.getElementById('expense-payer').value;
-  const date    = document.getElementById('expense-date').value;
-  const members = checkedMembers();
-  const notes   = document.getElementById('expense-notes').value.trim();
-  const category = document.getElementById('expense-category').value;
+/**
+ * Detects the most likely expense category from a description string.
+ * Used to auto-fill the category dropdown as the user types.
+ *
+ * @param {string} desc
+ * @returns {string} category key
+ */
+const CATEGORY_KEYWORDS = {
+  food:          ['food', 'lunch', 'dinner', 'breakfast', 'eat', 'restaurant', 'cafe', 'pizza', 'biryani', 'snack', 'swiggy', 'zomato', 'tea', 'coffee'],
+  transport:     ['uber', 'ola', 'cab', 'auto', 'bus', 'train', 'fuel', 'petrol', 'metro', 'ride', 'taxi', 'flight', 'ticket', 'travel'],
+  accommodation: ['hotel', 'hostel', 'rent', 'room', 'airbnb', 'stay', 'lodge', 'booking', 'pg', 'flat'],
+  shopping:      ['shopping', 'clothes', 'shirt', 'shoes', 'amazon', 'flipkart', 'mall', 'grocery', 'market', 'buy'],
+  entertainment: ['movie', 'film', 'concert', 'game', 'show', 'club', 'party', 'netflix', 'ticket', 'sport', 'cricket'],
+  utilities:     ['electricity', 'water', 'gas', 'wifi', 'internet', 'mobile', 'recharge', 'bill', 'repair', 'maintenance'],
+};
 
-  if (!group)                   return fail('Please select a group.');
-  if (!name)                    return fail('Please enter an expense name.');
-  if (name.length < 2)          return fail('Expense name must be at least 2 characters.');
-  if (!amountRaw)               return fail('Please enter the total amount.');
-  if (isNaN(amount) || amount <= 0) return fail('Please enter a valid amount greater than 0.');
-  if (amount > 1_000_000)       return fail('Amount seems too large. Please double-check.');
-  if (!payer)                   return fail('Please select who paid.');
-  if (!date)                    return fail('Please select a date.');
-  if (members.length === 0)     return fail('Please select at least one member to split with.');
-
-  return {
-    group,
-    desc:      name,
-    amount:    +amount.toFixed(2),
-    payer,
-    splitWith: members,
-    perPerson: +(amount / members.length).toFixed(2),
-    category,
-    notes,
-    date,
-  };
+function detectCategory(desc) {
+  const lower = desc.toLowerCase();
+  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) return cat;
+  }
+  return 'other';
 }
 
-function fail(msg) {
+// ── Form Validation ───────────────────────────────────────────
+
+/**
+ * Runs full validation on the expense form.
+ * Returns a clean expense object on success, null on failure.
+ * Each failure highlights the offending field and shows an inline error.
+ *
+ * @returns {Object|null}
+ */
+function validateExpenseForm() {
+  const groupEl  = document.getElementById('expense-group');
+  const nameEl   = document.getElementById('expense-name');
+  const amtEl    = document.getElementById('expense-amount');
+  const payerEl  = document.getElementById('expense-payer');
+  const dateEl   = document.getElementById('expense-date');
+  const catEl    = document.getElementById('expense-category');
+  const notesEl  = document.getElementById('expense-notes');
+
+  const group    = groupEl?.value  || '';
+  const name     = nameEl?.value.trim()  || '';
+  const amtRaw   = amtEl?.value  || '';
+  const amount   = parseFloat(amtRaw);
+  const payer    = payerEl?.value  || '';
+  const date     = dateEl?.value  || '';
+  const category = catEl?.value   || 'other';
+  const notes    = notesEl?.value.trim() || '';
+  const members  = checkedMembers();
+
+  // Ordered validation — fail on first error
+  if (!group)                         return fail('Please select a group first.', groupEl);
+  if (!name)                          return fail('Please enter an expense name.', nameEl);
+  if (name.length < 2)                return fail('Expense name must be at least 2 characters.', nameEl);
+  if (!amtRaw)                        return fail('Please enter the total amount.', amtEl);
+  if (isNaN(amount) || amount <= 0)   return fail('Amount must be a valid number greater than ₹0.', amtEl);
+  if (amount > 10_00_000)             return fail('Amount looks too large (max ₹10,00,000). Please check.', amtEl);
+  if (!payer)                         return fail('Please select who paid.', payerEl);
+  if (!date)                          return fail('Please pick a date.', dateEl);
+  if (members.length === 0)           return fail('Select at least one member to split with.');
+
+  // Safe per-person calculation (avoids floating-point drift)
+  const perPerson = Math.round((amount / members.length) * 100) / 100;
+
+  // Auto-detect category if user left it as 'other'
+  const resolvedCategory = (category === 'other' && name) ? detectCategory(name) : category;
+  if (catEl && resolvedCategory !== category) catEl.value = resolvedCategory;
+
+  return { group, desc: name, amount, payer, splitWith: members, perPerson, category: resolvedCategory, notes, date };
+}
+
+/**
+ * Helper: shows an error and optionally highlights the offending field.
+ * @param {string}          msg
+ * @param {HTMLElement|null} fieldEl
+ * @returns {null}
+ */
+function fail(msg, fieldEl = null) {
   showFormError(msg);
+  if (fieldEl) {
+    fieldEl.classList.add('field-error');
+    fieldEl.focus();
+    // Auto-clear highlight when user corrects the field
+    fieldEl.addEventListener('input', () => fieldEl.classList.remove('field-error'), { once: true });
+    fieldEl.addEventListener('change', () => fieldEl.classList.remove('field-error'), { once: true });
+  }
   return null;
 }
 
 // ── Error Display ─────────────────────────────────────────────
 
 function showFormError(msg) {
-  let box = document.getElementById('expense-form-error');
-  if (!box) {
-    alert(msg);
-    return;
-  }
+  const box = document.getElementById('expense-form-error');
+  if (!box) { alert(msg); return; }
   box.textContent = msg;
   box.classList.add('show');
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Smooth scroll only if the box is out of view
+  const rect = box.getBoundingClientRect();
+  if (rect.top < 0 || rect.bottom > window.innerHeight) {
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
 }
 
-// ── Clear Form Error ──────────────────────────────────────────
+// ── Clear Form Errors ─────────────────────────────────────────
 
 function clearFormError() {
   const box = document.getElementById('expense-form-error');
   if (box) { box.textContent = ''; box.classList.remove('show'); }
+  // Clear any field-level highlights
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
 }
 
 // ── Form Submit ───────────────────────────────────────────────
 
+/**
+ * Handles the expense form submission.
+ * Validates, builds the expense object, then saves to Firestore (or local for Guest).
+ * Shows loading state on button, restores it on error.
+ *
+ * @param {Event} e
+ */
 function handleSubmit(e) {
   e.preventDefault();
   clearFormError();
@@ -228,16 +290,18 @@ function handleSubmit(e) {
   markStep(3, true);
   markStep(4, true);
 
+  // Show loading state on submit button
+  const btn = document.getElementById('submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
   const isGuest = sessionStorage.getItem('isGuest') === 'true';
 
   if (isGuest) {
-    console.log('✅ Guest Expense saved locally:', expense);
-    showSuccessToast();
+    // Simulate a short save delay for better UX
+    setTimeout(() => showSuccessToast(), 600);
   } else {
-    // Save to Firestore
-    const groupRef = doc(db, "groups", expense.group);
-    
-    addDoc(collection(groupRef, "expenses"), {
+    const groupRef = doc(db, 'groups', expense.group);
+    addDoc(collection(groupRef, 'expenses'), {
       desc:      expense.desc,
       amount:    expense.amount,
       payer:     expense.payer,
@@ -245,15 +309,17 @@ function handleSubmit(e) {
       perPerson: expense.perPerson,
       category:  expense.category,
       notes:     expense.notes,
-      date:      Timestamp.fromDate(new Date(expense.date)),
+      date:      Timestamp.fromDate(new Date(expense.date + 'T00:00:00')),
       createdAt: serverTimestamp(),
     })
     .then(() => {
       showSuccessToast();
     })
     .catch(err => {
-      console.error("Error saving expense:", err);
-      showFormError("Failed to save expense. Please try again.");
+      console.error('Error saving expense:', err);
+      // Restore button so user can retry
+      if (btn) { btn.disabled = false; btn.textContent = 'Add Expense'; }
+      showFormError('Failed to save. Check your connection and try again.');
     });
   }
 }

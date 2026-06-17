@@ -17,6 +17,7 @@ import {
   totalExpenses,
   totalPaidBy,
   totalOwedBy,
+  totalOwedTo,
   renderBalanceSummary
 } from "./balance.js";
 
@@ -83,19 +84,14 @@ function setGreeting() {
 
 /** Recalculate and update the 4 stat cards on the dashboard */
 function updateStatCards() {
-  const allExpenses = GROUPS.flatMap(g => g.expenses || []);
-
-  // Total expenses across all groups
-  const total = totalExpenses(allExpenses);
-
-  // What current user paid
-  const paid = totalPaidBy(allExpenses, CURRENT_USER);
-
-  // What current user owes (computed via balance calculator)
+  const allExpenses    = GROUPS.flatMap(g => g.expenses || []);
   const allTransactions = getAllTransactions();
-  const owesTotal = totalOwedBy(allTransactions, CURRENT_USER);
 
-  // Update DOM
+  const total    = totalExpenses(allExpenses);
+  const paid     = totalPaidBy(allExpenses, CURRENT_USER);
+  const owes     = totalOwedBy(allTransactions, CURRENT_USER);
+  const isOwed   = totalOwedTo(allTransactions, CURRENT_USER);
+
   const totalEl  = document.querySelector('.stat-card:nth-child(1) .stat-value');
   const paidEl   = document.querySelector('.stat-card:nth-child(2) .stat-value');
   const owesEl   = document.querySelector('.stat-card:nth-child(3) .stat-value');
@@ -103,7 +99,7 @@ function updateStatCards() {
 
   if (totalEl)  totalEl.textContent  = '₹' + total.toLocaleString('en-IN');
   if (paidEl)   paidEl.textContent   = '₹' + paid.toLocaleString('en-IN');
-  if (owesEl)   owesEl.textContent   = '₹' + owesTotal.toLocaleString('en-IN');
+  if (owesEl)   owesEl.textContent   = '₹' + owes.toLocaleString('en-IN');
   if (groupsEl) groupsEl.textContent = GROUPS.length;
 }
 
@@ -352,11 +348,22 @@ function renderRecentExpenses() {
   `).join('');
 }
 
-// ── Search / Filter ───────────────────────────────────────────
+// ── Search / Filter (debounced) ───────────────────────────────
 
+let _searchTimer = null;
+
+/**
+ * Debounced search: waits 200 ms after the user stops typing before filtering.
+ * Prevents UI jitter on every keystroke.
+ *
+ * @param {string} val - Current value of the search input
+ */
 function handleSearch(val) {
-  const queryVal = val.toLowerCase().trim();
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => _applySearch(val.trim().toLowerCase()), 200);
+}
 
+function _applySearch(queryVal) {
   if (!queryVal) {
     renderGroups(GROUPS);
     renderRecentExpenses();
