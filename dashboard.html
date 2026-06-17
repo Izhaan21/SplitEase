@@ -187,6 +187,17 @@
               <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹9,000</span></div>
               <div class="group-meta-row"><span class="label">Last Active</span><span class="value">Today, 2:30 PM</span></div>
             </div>
+            <!-- Spending progress bar -->
+            <div class="group-progress-wrap" aria-label="Spending progress">
+              <div class="group-progress-labels">
+                <span>Your share</span>
+                <span class="group-progress-pct">100%</span>
+              </div>
+              <div class="group-progress-bar">
+                <div class="group-progress-fill settled" style="width:100%"></div>
+              </div>
+              <small class="group-progress-note">₹3,000 / ₹3,000 — fully settled ✓</small>
+            </div>
           </div>
           <div class="group-actions">
             <button class="btn btn-secondary btn-sm btn-full">View Group</button>
@@ -208,6 +219,17 @@
               <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹3,450</span></div>
               <div class="group-meta-row"><span class="label">Last Active</span><span class="value">Yesterday</span></div>
             </div>
+            <!-- Spending progress bar -->
+            <div class="group-progress-wrap" aria-label="Spending progress">
+              <div class="group-progress-labels">
+                <span>Your share paid</span>
+                <span class="group-progress-pct">46%</span>
+              </div>
+              <div class="group-progress-bar">
+                <div class="group-progress-fill" style="width:46%"></div>
+              </div>
+              <small class="group-progress-note">₹800 paid of ₹1,725 share</small>
+            </div>
           </div>
           <div class="group-actions">
             <button class="btn btn-secondary btn-sm btn-full">View Group</button>
@@ -228,6 +250,17 @@
               <div class="group-meta-row"><span class="label">Members</span><span class="value">3 (Arif, Izhaan, Nadeem)</span></div>
               <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹2,100</span></div>
               <div class="group-meta-row"><span class="label">Last Active</span><span class="value">3 days ago</span></div>
+            </div>
+            <!-- Spending progress bar -->
+            <div class="group-progress-wrap" aria-label="Spending progress">
+              <div class="group-progress-labels">
+                <span>Your share paid</span>
+                <span class="group-progress-pct">71%</span>
+              </div>
+              <div class="group-progress-bar">
+                <div class="group-progress-fill" style="width:71%"></div>
+              </div>
+              <small class="group-progress-note">₹500 paid of ₹700 share</small>
             </div>
           </div>
           <div class="group-actions">
@@ -257,7 +290,13 @@
                 <small>Room Rent, Dinner</small>
               </div>
             </div>
-            <span class="balance-amount text-red">₹1,850</span>
+            <div class="balance-row-right">
+              <span class="balance-amount text-red">₹1,850</span>
+              <button class="settle-btn" id="settle-nadeem" title="Settle up with Nadeem" onclick="this.classList.toggle('settling')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Settle Up
+              </button>
+            </div>
           </div>
           <div class="balance-row">
             <div class="balance-who">
@@ -267,7 +306,13 @@
                 <small>Cab, Snacks</small>
               </div>
             </div>
-            <span class="balance-amount text-green">₹1,200</span>
+            <div class="balance-row-right">
+              <span class="balance-amount text-green">₹1,200</span>
+              <button class="settle-btn settle-btn-receive" id="settle-izhaan" title="Mark received from Izhaan" onclick="this.classList.toggle('settling')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Received
+              </button>
+            </div>
           </div>
         </div>
 
@@ -292,7 +337,7 @@
 
         <div class="expense-list" id="expense-list">
 
-          <div class="expense-row">
+          <div class="expense-row" data-category="food">
             <div class="expense-left">
               <div class="expense-emoji">🍔</div>
               <div>
@@ -306,7 +351,7 @@
             </div>
           </div>
 
-          <div class="expense-row">
+          <div class="expense-row" data-category="transport">
             <div class="expense-left">
               <div class="expense-emoji">🚗</div>
               <div>
@@ -320,7 +365,7 @@
             </div>
           </div>
 
-          <div class="expense-row">
+          <div class="expense-row" data-category="accommodation">
             <div class="expense-left">
               <div class="expense-emoji">🏢</div>
               <div>
@@ -334,7 +379,7 @@
             </div>
           </div>
 
-          <div class="expense-row">
+          <div class="expense-row" data-category="food">
             <div class="expense-left">
               <div class="expense-emoji">🍕</div>
               <div>

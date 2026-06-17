@@ -142,6 +142,23 @@ function guestLogin() {
   window.location.href = 'dashboard.html';
 }
 
+// ── Google Login (UI Demo Stub) ───────────────────────────────
+
+function handleGoogleLogin() {
+  clearError();
+  setLoading('btn-google', true, 'Signing in…');
+  
+  // TODO (Dev 3): Replace this block with Firebase Google Auth integration:
+  // import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+  // const provider = new GoogleAuthProvider();
+  // signInWithPopup(auth, provider).then(...)
+  
+  setTimeout(() => {
+    sessionStorage.setItem('isGuest', 'true');
+    window.location.href = 'dashboard.html';
+  }, 800);
+}
+
 // ── Firebase Error Code Mapper (for Dev 3 to use) ─────────────
 
 /**

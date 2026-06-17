@@ -301,8 +301,155 @@
 .expense-date   { font-size: 11px; color: var(--muted-gray); margin-top: 2px; }
 
 /* ============================================================
+   GROUP CARD — SPENDING PROGRESS BAR  (Day 3)
+   ============================================================ */
+.group-progress-wrap {
+  margin-top: 14px;
+}
+
+.group-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted-gray);
+  margin-bottom: 6px;
+}
+.group-progress-pct {
+  font-weight: 700;
+  color: var(--primary-green);
+  font-size: 12px;
+}
+
+.group-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.group-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22C55E, #16A34A);
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group-progress-fill.settled {
+  background: linear-gradient(90deg, #22C55E, #4ADE80);
+  box-shadow: 0 0 6px rgba(34,197,94,0.4);
+}
+
+.group-progress-note {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-gray);
+  margin-top: 5px;
+}
+
+/* ============================================================
+   BALANCE ROW — SETTLE UP BUTTON  (Day 3)
+   ============================================================ */
+.balance-row {
+  transition: background var(--transition), border-color var(--transition);
+}
+.balance-row:hover {
+  background: var(--bg-hover);
+  border-color: rgba(255,255,255,0.06);
+}
+
+.balance-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.settle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform 0.15s ease,
+    box-shadow var(--transition);
+  white-space: nowrap;
+  /* Default: owe style (orange border) */
+  background: transparent;
+  border: 1.5px solid var(--orange);
+  color: var(--orange);
+}
+.settle-btn:hover {
+  background: rgba(245,158,11,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(245,158,11,0.2);
+}
+.settle-btn.settling {
+  background: var(--orange);
+  color: var(--bg-primary);
+}
+
+/* Receive variant (green) */
+.settle-btn-receive {
+  border-color: var(--primary-green);
+  color: var(--primary-green);
+}
+.settle-btn-receive:hover {
+  background: rgba(34,197,94,0.1);
+  box-shadow: 0 3px 8px rgba(34,197,94,0.2);
+}
+.settle-btn-receive.settling {
+  background: var(--primary-green);
+  color: var(--bg-primary);
+}
+
+/* ============================================================
+   EXPENSE ROW — CATEGORY LEFT BORDER ACCENT  (Day 3)
+   ============================================================ */
+.expense-row {
+  border-left: 3px solid transparent;
+  padding-left: 12px;
+  border-radius: 4px;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform 0.15s ease;
+}
+.expense-row:hover {
+  background: var(--bg-secondary);
+  transform: translateX(2px);
+}
+.expense-row:last-child { padding-bottom: 0; border-bottom: none; }
+
+/* Category colour accents */
+.expense-row[data-category="food"]          { border-left-color: #F59E0B; }
+.expense-row[data-category="transport"]     { border-left-color: #3B82F6; }
+.expense-row[data-category="accommodation"] { border-left-color: #8B5CF6; }
+.expense-row[data-category="shopping"]      { border-left-color: #EC4899; }
+.expense-row[data-category="entertainment"] { border-left-color: #EF4444; }
+.expense-row[data-category="utilities"]     { border-left-color: #06B6D4; }
+.expense-row[data-category="other"]         { border-left-color: #6B7280; }
+
+/* emoji bubble matching category accent */
+.expense-row[data-category="food"]          .expense-emoji { background: rgba(245,158,11,0.10); border-color: rgba(245,158,11,0.20); }
+.expense-row[data-category="transport"]     .expense-emoji { background: rgba(59,130,246,0.10); border-color: rgba(59,130,246,0.20); }
+.expense-row[data-category="accommodation"] .expense-emoji { background: rgba(139,92,246,0.10); border-color: rgba(139,92,246,0.20); }
+.expense-row[data-category="shopping"]      .expense-emoji { background: rgba(236,72,153,0.10); border-color: rgba(236,72,153,0.20); }
+.expense-row[data-category="entertainment"] .expense-emoji { background: rgba(239,68,68,0.10);  border-color: rgba(239,68,68,0.20); }
+.expense-row[data-category="utilities"]     .expense-emoji { background: rgba(6,182,212,0.10);  border-color: rgba(6,182,212,0.20); }
+
+/* ============================================================
    MODAL
    ============================================================ */
+
 .modal-overlay {
   display: none;
   position: fixed; inset: 0;

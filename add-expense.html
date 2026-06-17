@@ -82,17 +82,40 @@
               <option value="office">Office Lunch</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="expense-category">Category</label>
-            <select class="form-select" id="expense-category">
-              <option value="food">🍔 Food &amp; Drinks</option>
-              <option value="transport">🚗 Transport</option>
-              <option value="accommodation">🏢 Accommodation</option>
-              <option value="shopping">🛍️ Shopping</option>
-              <option value="entertainment">🎬 Entertainment</option>
-              <option value="utilities">💡 Utilities</option>
-              <option value="other">📦 Other</option>
-            </select>
+          <div class="form-group category-picker-group">
+            <label class="form-label">Category</label>
+            <!-- Hidden input so Dev 2 JS can still read #expense-category -->
+            <input type="hidden" id="expense-category" value="food" />
+            <div class="category-grid" id="category-grid" role="group" aria-label="Expense category">
+              <button type="button" class="category-tile active" data-value="food" id="cat-food" onclick="selectCategory(this)">
+                <span class="cat-emoji">🍔</span>
+                <span class="cat-label">Food</span>
+              </button>
+              <button type="button" class="category-tile" data-value="transport" id="cat-transport" onclick="selectCategory(this)">
+                <span class="cat-emoji">🚗</span>
+                <span class="cat-label">Transport</span>
+              </button>
+              <button type="button" class="category-tile" data-value="accommodation" id="cat-accommodation" onclick="selectCategory(this)">
+                <span class="cat-emoji">🏨</span>
+                <span class="cat-label">Stay</span>
+              </button>
+              <button type="button" class="category-tile" data-value="shopping" id="cat-shopping" onclick="selectCategory(this)">
+                <span class="cat-emoji">🛍️</span>
+                <span class="cat-label">Shopping</span>
+              </button>
+              <button type="button" class="category-tile" data-value="entertainment" id="cat-entertainment" onclick="selectCategory(this)">
+                <span class="cat-emoji">🎬</span>
+                <span class="cat-label">Fun</span>
+              </button>
+              <button type="button" class="category-tile" data-value="utilities" id="cat-utilities" onclick="selectCategory(this)">
+                <span class="cat-emoji">💡</span>
+                <span class="cat-label">Utilities</span>
+              </button>
+              <button type="button" class="category-tile" data-value="other" id="cat-other" onclick="selectCategory(this)">
+                <span class="cat-emoji">📦</span>
+                <span class="cat-label">Other</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -188,6 +211,14 @@
   <p>Expense added successfully!</p>
 </div>
 
+<script>
+  /* ── Category tile selector (UI only — Dev 2 reads #expense-category hidden input) ── */
+  function selectCategory(tile) {
+    document.querySelectorAll('.category-tile').forEach(t => t.classList.remove('active'));
+    tile.classList.add('active');
+    document.getElementById('expense-category').value = tile.dataset.value;
+  }
+</script>
 <script src="js/expense.js"></script>
 
 </body>
