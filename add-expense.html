@@ -230,6 +230,14 @@
     <p>Expense added successfully!</p>
   </div>
 
+  <script>
+    /* ── Category tile selector (UI only — Dev 2 reads #expense-category hidden input) ── */
+    function selectCategory(tile) {
+      document.querySelectorAll('.category-tile').forEach(t => t.classList.remove('active'));
+      tile.classList.add('active');
+      document.getElementById('expense-category').value = tile.dataset.value;
+    }
+  </script>
   <script type="module" src="js/expense.js"></script>
 
 </body>
