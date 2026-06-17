@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,187 +19,219 @@
     }
   </script>
 </head>
+
 <body>
 
-<div class="expense-page">
-  <div class="expense-layout fade-up">
+  <div class="expense-page">
+    <div class="expense-layout fade-up">
 
-    <!-- ════════════════════════════════
+      <!-- ════════════════════════════════
          LEFT INFO SIDEBAR
     ════════════════════════════════ -->
-    <aside>
-      <a class="back-nav" href="dashboard.html">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 19l-7-7 7-7"/>
-        </svg>
-        Back to Dashboard
-      </a>
+      <aside>
+        <a class="back-nav" href="dashboard.html">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </a>
 
-      <div class="card expense-info-card">
-        <h2>Add Expense</h2>
-        <p>Fill in the details, choose who paid, and select how to split the cost.</p>
+        <div class="card expense-info-card">
+          <h2>Add Expense</h2>
+          <p>Fill in the details, choose who paid, and select how to split the cost.</p>
 
-        <div class="info-steps">
-          <div class="info-step">
-            <div class="step-dot done" id="step-dot-1">1</div>
-            <div class="step-text">
-              <strong>Select Group</strong>
-              <small>Choose which group this belongs to</small>
+          <div class="info-steps">
+            <div class="info-step">
+              <div class="step-dot done" id="step-dot-1">1</div>
+              <div class="step-text">
+                <strong>Select Group</strong>
+                <small>Choose which group this belongs to</small>
+              </div>
             </div>
-          </div>
-          <div class="info-step">
-            <div class="step-dot" id="step-dot-2">2</div>
-            <div class="step-text">
-              <strong>Enter Details</strong>
-              <small>Name, amount, and who paid</small>
+            <div class="info-step">
+              <div class="step-dot" id="step-dot-2">2</div>
+              <div class="step-text">
+                <strong>Enter Details</strong>
+                <small>Name, amount, and who paid</small>
+              </div>
             </div>
-          </div>
-          <div class="info-step">
-            <div class="step-dot" id="step-dot-3">3</div>
-            <div class="step-text">
-              <strong>Split Members</strong>
-              <small>Pick who shares the expense</small>
+            <div class="info-step">
+              <div class="step-dot" id="step-dot-3">3</div>
+              <div class="step-text">
+                <strong>Split Members</strong>
+                <small>Pick who shares the expense</small>
+              </div>
             </div>
-          </div>
-          <div class="info-step">
-            <div class="step-dot" id="step-dot-4">4</div>
-            <div class="step-text">
-              <strong>Save</strong>
-              <small>Expense is added to the group</small>
+            <div class="info-step">
+              <div class="step-dot" id="step-dot-4">4</div>
+              <div class="step-text">
+                <strong>Save</strong>
+                <small>Expense is added to the group</small>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
 
-    <!-- ════════════════════════════════
+      <!-- ════════════════════════════════
          FORM CARD
     ════════════════════════════════ -->
-    <div class="card expense-form-card">
-      <h2>New Expense</h2>
-      <p>All fields marked with * are required</p>
+      <div class="card expense-form-card">
+        <h2>New Expense</h2>
+        <p>All fields marked with * are required</p>
 
-      <form id="expense-form" onsubmit="window.handleSubmit(event)" novalidate>
+        <form id="expense-form" onsubmit="window.handleSubmit(event)" novalidate>
 
-        <!-- ── Group & Category ── -->
-        <div class="form-row-2">
+          <!-- ── Group & Category ── -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="expense-group">Group *</label>
+              <select class="form-select" id="expense-group" required onchange="window.onGroupChange()">
+                <option value="" disabled selected>Select a group…</option>
+                <option value="goa">Goa Trip 2026</option>
+                <option value="room">Room Expenses</option>
+                <option value="office">Office Lunch</option>
+              </select>
+            </div>
+            <div class="form-group category-picker-group">
+              <label class="form-label">Category</label>
+              <!-- Hidden input so Dev 2 JS can still read #expense-category -->
+              <input type="hidden" id="expense-category" value="food" />
+              <div class="category-grid" id="category-grid" role="group" aria-label="Expense category">
+                <button type="button" class="category-tile active" data-value="food" id="cat-food"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">🍔</span>
+                  <span class="cat-label">Food</span>
+                </button>
+                <button type="button" class="category-tile" data-value="transport" id="cat-transport"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">🚗</span>
+                  <span class="cat-label">Transport</span>
+                </button>
+                <button type="button" class="category-tile" data-value="accommodation" id="cat-accommodation"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">🏨</span>
+                  <span class="cat-label">Stay</span>
+                </button>
+                <button type="button" class="category-tile" data-value="shopping" id="cat-shopping"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">🛍️</span>
+                  <span class="cat-label">Shopping</span>
+                </button>
+                <button type="button" class="category-tile" data-value="entertainment" id="cat-entertainment"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">🎬</span>
+                  <span class="cat-label">Fun</span>
+                </button>
+                <button type="button" class="category-tile" data-value="utilities" id="cat-utilities"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">💡</span>
+                  <span class="cat-label">Utilities</span>
+                </button>
+                <button type="button" class="category-tile" data-value="other" id="cat-other"
+                  onclick="selectCategory(this)">
+                  <span class="cat-emoji">📦</span>
+                  <span class="cat-label">Other</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <hr class="form-divider" />
+
+          <!-- ── Expense name ── -->
           <div class="form-group">
-            <label class="form-label" for="expense-group">Group *</label>
-            <select class="form-select" id="expense-group" required onchange="window.onGroupChange()">
-              <option value="" disabled selected>Select a group…</option>
-              <option value="goa">Goa Trip 2026</option>
-              <option value="room">Room Expenses</option>
-              <option value="office">Office Lunch</option>
-            </select>
+            <label class="form-label" for="expense-name">Expense Name *</label>
+            <input class="form-input" type="text" id="expense-name" placeholder="e.g. Dinner at Ocean's, Uber Ride…"
+              required />
           </div>
+
+          <!-- ── Amount ── -->
           <div class="form-group">
-            <label class="form-label" for="expense-category">Category</label>
-            <select class="form-select" id="expense-category">
-              <option value="food">🍔 Food &amp; Drinks</option>
-              <option value="transport">🚗 Transport</option>
-              <option value="accommodation">🏢 Accommodation</option>
-              <option value="shopping">🛍️ Shopping</option>
-              <option value="entertainment">🎬 Entertainment</option>
-              <option value="utilities">💡 Utilities</option>
-              <option value="other">📦 Other</option>
-            </select>
+            <label class="form-label" for="expense-amount">Total Amount (₹) *</label>
+            <div class="amount-field-wrap">
+              <span class="amount-prefix">₹</span>
+              <input class="form-input-amount" type="number" id="expense-amount" placeholder="0" min="1" step="0.01"
+                required oninput="window.updateSplitPreview()" />
+            </div>
           </div>
-        </div>
 
-        <hr class="form-divider" />
-
-        <!-- ── Expense name ── -->
-        <div class="form-group">
-          <label class="form-label" for="expense-name">Expense Name *</label>
-          <input class="form-input" type="text" id="expense-name"
-            placeholder="e.g. Dinner at Ocean's, Uber Ride…" required />
-        </div>
-
-        <!-- ── Amount ── -->
-        <div class="form-group">
-          <label class="form-label" for="expense-amount">Total Amount (₹) *</label>
-          <div class="amount-field-wrap">
-            <span class="amount-prefix">₹</span>
-            <input class="form-input-amount" type="number" id="expense-amount"
-              placeholder="0" min="1" step="0.01" required oninput="window.updateSplitPreview()" />
+          <!-- ── Paid by & Date ── -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="expense-payer">Paid By *</label>
+              <select class="form-select" id="expense-payer" required>
+                <option value="" disabled selected>Who paid?</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="expense-date">Date *</label>
+              <input class="form-input" type="date" id="expense-date" required />
+            </div>
           </div>
-        </div>
 
-        <!-- ── Paid by & Date ── -->
-        <div class="form-row-2">
+          <hr class="form-divider" />
+
+          <!-- ── Split with ── -->
+          <div class="form-group" style="margin-bottom:8px;">
+            <label class="form-label">Split With *</label>
+            <div class="members-grid" id="members-grid">
+              <p style="color:var(--muted-gray);font-size:13px;grid-column:1/-1;">
+                Select a group above to see members.
+              </p>
+            </div>
+          </div>
+
+          <!-- Per-person preview -->
+          <div class="split-preview" id="split-preview" style="display:none;">
+            <p>Each person pays</p>
+            <strong id="per-person-amount">₹0</strong>
+          </div>
+
+          <hr class="form-divider" />
+
+          <!-- ── Notes ── -->
           <div class="form-group">
-            <label class="form-label" for="expense-payer">Paid By *</label>
-            <select class="form-select" id="expense-payer" required>
-              <option value="" disabled selected>Who paid?</option>
-            </select>
+            <label class="form-label" for="expense-notes">Notes (optional)</label>
+            <textarea class="form-textarea" id="expense-notes"
+              placeholder="Any extra details about this expense…"></textarea>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="expense-date">Date *</label>
-            <input class="form-input" type="date" id="expense-date" required />
+
+          <!-- ── Error ── -->
+          <div class="form-error" id="expense-form-error"></div>
+
+          <!-- ── Submit ── -->
+          <div class="submit-row">
+            <a href="dashboard.html" class="btn btn-secondary" style="flex:1;text-align:center;">
+              Cancel
+            </a>
+            <button type="submit" class="btn btn-primary" style="flex:2;" id="submit-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              Add Expense
+            </button>
           </div>
-        </div>
 
-        <hr class="form-divider" />
+        </form>
+      </div>
 
-        <!-- ── Split with ── -->
-        <div class="form-group" style="margin-bottom:8px;">
-          <label class="form-label">Split With *</label>
-          <div class="members-grid" id="members-grid">
-            <p style="color:var(--muted-gray);font-size:13px;grid-column:1/-1;">
-              Select a group above to see members.
-            </p>
-          </div>
-        </div>
-
-        <!-- Per-person preview -->
-        <div class="split-preview" id="split-preview" style="display:none;">
-          <p>Each person pays</p>
-          <strong id="per-person-amount">₹0</strong>
-        </div>
-
-        <hr class="form-divider" />
-
-        <!-- ── Notes ── -->
-        <div class="form-group">
-          <label class="form-label" for="expense-notes">Notes (optional)</label>
-          <textarea class="form-textarea" id="expense-notes"
-            placeholder="Any extra details about this expense…"></textarea>
-        </div>
-
-        <!-- ── Error ── -->
-        <div class="form-error" id="expense-form-error"></div>
-
-        <!-- ── Submit ── -->
-        <div class="submit-row">
-          <a href="dashboard.html" class="btn btn-secondary" style="flex:1;text-align:center;">
-            Cancel
-          </a>
-          <button type="submit" class="btn btn-primary" style="flex:2;" id="submit-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-            Add Expense
-          </button>
-        </div>
-
-      </form>
     </div>
-
   </div>
-</div>
 
-<!-- ── Success toast ── -->
-<div class="toast" id="toast">
-  <svg class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M20 6L9 17l-5-5"/>
-  </svg>
-  <p>Expense added successfully!</p>
-</div>
+  <!-- ── Success toast ── -->
+  <div class="toast" id="toast">
+    <svg class="toast-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5" />
+    </svg>
+    <p>Expense added successfully!</p>
+  </div>
 
-<script type="module" src="js/expense.js"></script>
+  <script src="js/expense.js"></script>
 
 </body>
+
 </html>
