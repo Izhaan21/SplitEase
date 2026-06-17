@@ -1,17 +1,34 @@
+import { auth, db } from "./firebase.js";
+import { signOut, onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  doc,
+  addDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+} from "firebase/firestore";
+import {
+  computeNetBalances,
+  simplifyDebts,
+  getUserSummary,
+  totalExpenses,
+  totalPaidBy,
+  totalOwedBy,
+  renderBalanceSummary
+} from "./balance.js";
+
 /* ============================================================
-   dashboard.js  —  SplitEase  |  dev-logic
+   dashboard.js  —  SplitEase  |  dev-firebase
    Handles: group data model, group card rendering,
             stat card updates, search filtering,
-            balance summary wiring
+            balance summary wiring, real-time Firestore sync
    ============================================================ */
 
-// ── In-memory Store (replaced by Firestore in dev-firebase) ───
-
-/**
- * Groups store — each entry follows the Group typedef in balance.js
- * TODO (Dev 3): Replace with Firestore onSnapshot listener
- */
-let GROUPS = [
+// ── In-memory Fallback Store for Guest Mode ───────────────────
+let GUEST_GROUPS = [
   {
     id:        'goa',
     name:      'Goa Trip 2026',
@@ -48,8 +65,10 @@ let GROUPS = [
   },
 ];
 
-/** Currently logged-in user's name (replace with auth.currentUser.displayName after Dev 3 wires Auth) */
-const CURRENT_USER = 'Arif';
+let GROUPS = [];
+let CURRENT_USER = 'Guest';
+let expenseListeners = {};
+let groupsListener = null;
 
 // ── Greeting ──────────────────────────────────────────────────
 
@@ -64,7 +83,7 @@ function setGreeting() {
 
 /** Recalculate and update the 4 stat cards on the dashboard */
 function updateStatCards() {
-  const allExpenses = GROUPS.flatMap(g => g.expenses);
+  const allExpenses = GROUPS.flatMap(g => g.expenses || []);
 
   // Total expenses across all groups
   const total = totalExpenses(allExpenses);
@@ -94,7 +113,7 @@ function updateStatCards() {
 function getAllTransactions() {
   let allTransactions = [];
   GROUPS.forEach(group => {
-    const balances     = computeNetBalances(group.expenses, group.members);
+    const balances     = computeNetBalances(group.expenses || [], group.members || []);
     const transactions = simplifyDebts(balances);
     allTransactions    = allTransactions.concat(transactions);
   });
@@ -105,7 +124,7 @@ function getAllTransactions() {
 
 /**
  * Build and return a group card DOM element.
- * @param {Group} group
+ * @param {Object} group
  * @returns {HTMLElement}
  */
 function buildGroupCard(group) {
@@ -113,7 +132,7 @@ function buildGroupCard(group) {
   const spent = totalExpenses(allExpenses);
 
   const lastExpense = allExpenses.length > 0
-    ? allExpenses.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+    ? [...allExpenses].sort((a, b) => new Date(b.date) - new Date(a.date))[0]
     : null;
 
   const lastActive = lastExpense
@@ -151,9 +170,9 @@ function buildGroupCard(group) {
       </div>
     </div>
     <div class="group-actions">
-      <button class="btn btn-secondary btn-sm btn-full" onclick="viewGroup('${group.id}')">View Group</button>
+      <button class="btn btn-secondary btn-sm btn-full" onclick="window.viewGroup('${group.id}')">View Group</button>
       <button class="btn btn-primary btn-sm btn-icon" title="Add Expense"
-        onclick="goToAddExpense('${escapeHTML(group.name)}')">
+        onclick="window.goToAddExpense('${escapeHTML(group.name)}')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -185,9 +204,7 @@ function renderGroups(groups) {
 // ── Create Group ──────────────────────────────────────────────
 
 /**
- * Validates form inputs, creates a new Group object,
- * adds it to the GROUPS store, and re-renders the grid.
- * TODO (Dev 3): Save to Firestore instead of local array
+ * Validates form inputs, creates a new Group object in Firestore (or local if Guest).
  * @param {Event} e
  */
 function handleCreateGroup(e) {
@@ -218,6 +235,11 @@ function handleCreateGroup(e) {
     return showGroupError('Please add at least one member.');
   }
 
+  // Ensure current user is included in the members list
+  if (!members.some(m => m.toLowerCase() === CURRENT_USER.toLowerCase())) {
+    members.unshift(CURRENT_USER);
+  }
+
   // Duplicate name check
   const exists = GROUPS.find(g => g.name.toLowerCase() === name.toLowerCase());
   if (exists) {
@@ -225,28 +247,43 @@ function handleCreateGroup(e) {
     return showGroupError(`A group named "${name}" already exists.`);
   }
 
-  // ── Build Group object ──
-  const newGroup = {
-    id:        'group_' + Date.now(),
-    name,
-    members,
-    createdBy: CURRENT_USER,
-    createdAt: new Date().toISOString(),
-    status:    'pending',
-    expenses:  [],
-  };
+  const isGuest = sessionStorage.getItem('isGuest') === 'true';
 
-  // Add to store (TODO Dev 3: addDoc to Firestore)
-  GROUPS.unshift(newGroup);
+  if (isGuest) {
+    const newGroup = {
+      id:        'group_' + Date.now(),
+      name,
+      members,
+      createdBy: CURRENT_USER,
+      createdAt: new Date().toISOString(),
+      status:    'pending',
+      expenses:  [],
+    };
+    GROUPS.unshift(newGroup);
+    renderDashboard();
+    closeModal();
+    nameInput.value    = '';
+    membersInput.value = '';
+  } else {
+    const newGroupData = {
+      name,
+      members,
+      createdBy: auth.currentUser.uid,
+      createdAt: serverTimestamp(),
+      status: 'pending'
+    };
 
-  // Re-render
-  renderGroups(GROUPS);
-  updateStatCards();
-  closeModal();
-
-  // Reset form
-  nameInput.value    = '';
-  membersInput.value = '';
+    addDoc(collection(db, "groups"), newGroupData)
+      .then(() => {
+        closeModal();
+        nameInput.value    = '';
+        membersInput.value = '';
+      })
+      .catch(err => {
+        console.error("Error creating group:", err);
+        showGroupError("Failed to create group. Please try again.");
+      });
+  }
 }
 
 function showGroupError(msg) {
@@ -258,13 +295,11 @@ function showGroupError(msg) {
 // ── View Group ────────────────────────────────────────────────
 
 function viewGroup(groupId) {
-  // TODO: navigate to a group detail page or open a modal
   const group = GROUPS.find(g => g.id === groupId);
   if (!group) return;
-  // For now, pass group ID via sessionStorage and navigate
   sessionStorage.setItem('viewGroupId', groupId);
   console.log('View group:', group.name);
-  // window.location.href = 'group.html'; // when group page is built
+  alert(`Group details for "${group.name}" coming soon!`);
 }
 
 // ── Navigate to Add Expense ───────────────────────────────────
@@ -319,15 +354,10 @@ function renderRecentExpenses() {
 
 // ── Search / Filter ───────────────────────────────────────────
 
-/**
- * Filters groups and expense rows by a search query.
- * Matches against group name, members, and expense descriptions.
- * @param {string} val
- */
 function handleSearch(val) {
-  const query = val.toLowerCase().trim();
+  const queryVal = val.toLowerCase().trim();
 
-  if (!query) {
+  if (!queryVal) {
     renderGroups(GROUPS);
     renderRecentExpenses();
     return;
@@ -335,9 +365,9 @@ function handleSearch(val) {
 
   // Filter groups
   const filteredGroups = GROUPS.filter(g => {
-    const nameMatch    = g.name.toLowerCase().includes(query);
-    const memberMatch  = g.members.some(m => m.toLowerCase().includes(query));
-    const expenseMatch = g.expenses.some(e => e.desc.toLowerCase().includes(query));
+    const nameMatch    = g.name.toLowerCase().includes(queryVal);
+    const memberMatch  = g.members.some(m => m.toLowerCase().includes(queryVal));
+    const expenseMatch = g.expenses.some(e => e.desc.toLowerCase().includes(queryVal));
     return nameMatch || memberMatch || expenseMatch;
   });
 
@@ -349,7 +379,7 @@ function handleSearch(val) {
     const rows = listEl.querySelectorAll('.expense-row');
     rows.forEach(row => {
       const text = row.textContent.toLowerCase();
-      row.style.display = text.includes(query) ? '' : 'none';
+      row.style.display = text.includes(queryVal) ? '' : 'none';
     });
   }
 }
@@ -382,7 +412,6 @@ function closeSidebar() {
 
 // ── Utility ───────────────────────────────────────────────────
 
-/** Prevent XSS when inserting user content into innerHTML */
 function escapeHTML(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -391,15 +420,14 @@ function escapeHTML(str) {
     .replace(/"/g, '&quot;');
 }
 
-/**
- * Format a date string as a relative label.
- * @param {string} dateStr  e.g. '2026-06-16'
- * @returns {string}  e.g. 'Today, 2:30 PM' | 'Yesterday' | '14 Jun'
- */
 function formatRelativeDate(dateStr) {
   const date  = new Date(dateStr);
   const today = new Date();
-  const diff  = Math.floor((today - date) / 86400000);
+  
+  // Set times to midnight to calculate accurate day differences
+  const d1 = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const d2 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diff  = Math.floor((d2 - d1) / 86400000);
 
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
@@ -407,15 +435,176 @@ function formatRelativeDate(dateStr) {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+// ── Firebase Real-time Synchronization ─────────────────────────
+
+function initFirebaseSync(user) {
+  CURRENT_USER = user.displayName || user.email.split('@')[0];
+  
+  // Update User Chip
+  const userAvatar = document.querySelector('.user-avatar');
+  const userChipName = document.querySelector('.user-chip-name');
+  if (userAvatar) {
+    userAvatar.textContent = CURRENT_USER.charAt(0).toUpperCase();
+  }
+  if (userChipName) {
+    userChipName.textContent = CURRENT_USER;
+  }
+
+  // Real-time query for groups containing current user
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
+
+  groupsListener = onSnapshot(groupsQuery, (snapshot) => {
+    const activeGroupIds = [];
+    const newGroupsMap = {};
+
+    snapshot.forEach(docSnap => {
+      const gData = docSnap.data();
+      const groupId = docSnap.id;
+      activeGroupIds.push(groupId);
+
+      newGroupsMap[groupId] = {
+        id: groupId,
+        name: gData.name,
+        members: gData.members || [],
+        createdBy: gData.createdBy,
+        createdAt: gData.createdAt ? (gData.createdAt.toDate ? gData.createdAt.toDate().toISOString() : gData.createdAt) : new Date().toISOString(),
+        status: gData.status || 'pending',
+        expenses: [] // populated by subcollection listener
+      };
+    });
+
+    // Unsubscribe from removed groups
+    Object.keys(expenseListeners).forEach(gid => {
+      if (!activeGroupIds.includes(gid)) {
+        expenseListeners[gid]();
+        delete expenseListeners[gid];
+      }
+    });
+
+    if (activeGroupIds.length === 0) {
+      GROUPS = [];
+      renderDashboard();
+      return;
+    }
+
+    // Set up or maintain subcollection listeners for active groups
+    activeGroupIds.forEach(gid => {
+      if (!expenseListeners[gid]) {
+        const expensesQuery = query(
+          collection(db, "groups", gid, "expenses"),
+          orderBy("date", "desc")
+        );
+
+        expenseListeners[gid] = onSnapshot(expensesQuery, (expSnapshot) => {
+          const expenses = [];
+          expSnapshot.forEach(expSnap => {
+            const expData = expSnap.data();
+            expenses.push({
+              id: expSnap.id,
+              desc: expData.desc,
+              amount: expData.amount,
+              payer: expData.payer,
+              splitWith: expData.splitWith || [],
+              perPerson: expData.perPerson,
+              date: expData.date ? (expData.date.toDate ? expData.date.toDate().toISOString().split('T')[0] : expData.date) : new Date().toISOString().split('T')[0],
+              category: expData.category || 'other',
+              notes: expData.notes || '',
+              createdAt: expData.createdAt
+            });
+          });
+
+          if (newGroupsMap[gid]) {
+            newGroupsMap[gid].expenses = expenses;
+          } else {
+            const cachedGroup = GROUPS.find(g => g.id === gid);
+            if (cachedGroup) cachedGroup.expenses = expenses;
+          }
+
+          GROUPS = Object.values(newGroupsMap);
+          renderDashboard();
+        }, (error) => {
+          console.error(`Error loading expenses for group ${gid}:`, error);
+        });
+      } else {
+        const oldGroup = GROUPS.find(g => g.id === gid);
+        if (oldGroup) {
+          newGroupsMap[gid].expenses = oldGroup.expenses || [];
+        }
+      }
+    });
+
+    GROUPS = Object.values(newGroupsMap);
+    renderDashboard();
+  }, (error) => {
+    console.error("Error subscribing to groups:", error);
+  });
+}
+
+function renderDashboard() {
+  renderGroups(GROUPS);
+  renderRecentExpenses();
+  updateStatCards();
+  
+  const allTransactions = getAllTransactions();
+  renderBalanceSummary(allTransactions, CURRENT_USER);
+}
+
+// ── Logout Handler ─────────────────────────────────────────────
+
+function handleLogout(e) {
+  e.preventDefault();
+  if (sessionStorage.getItem('isGuest') === 'true') {
+    sessionStorage.removeItem('isGuest');
+    window.location.href = 'index.html';
+  } else {
+    // Unsubscribe from listeners
+    if (groupsListener) {
+      groupsListener();
+    }
+    Object.values(expenseListeners).forEach(unsubscribe => unsubscribe());
+    expenseListeners = {};
+
+    signOut(auth)
+      .then(() => {
+        window.location.href = 'index.html';
+      })
+      .catch(err => {
+        console.error("Signout failed:", err);
+        window.location.href = 'index.html';
+      });
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
   setGreeting();
-  renderGroups(GROUPS);
-  renderRecentExpenses();
-  updateStatCards();
 
-  // Render balance summary using real calculator
-  const allTransactions = getAllTransactions();
-  renderBalanceSummary(allTransactions, CURRENT_USER);
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      initFirebaseSync(user);
+    } else {
+      if (sessionStorage.getItem('isGuest') === 'true') {
+        CURRENT_USER = 'Arif';
+        GROUPS = GUEST_GROUPS;
+        renderDashboard();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+  });
 });
+
+// Expose functions to window
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.handleCreateGroup = handleCreateGroup;
+window.openSidebar = openSidebar;
+window.closeSidebar = closeSidebar;
+window.handleSearch = handleSearch;
+window.viewGroup = viewGroup;
+window.goToAddExpense = goToAddExpense;
+window.handleLogout = handleLogout;

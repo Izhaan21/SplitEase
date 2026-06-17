@@ -7,6 +7,16 @@
   <title>Add Expense — SplitEase</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/expense.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js"
+      }
+    }
+  </script>
 </head>
 <body>
 
@@ -69,13 +79,13 @@
       <h2>New Expense</h2>
       <p>All fields marked with * are required</p>
 
-      <form id="expense-form" onsubmit="handleSubmit(event)" novalidate>
+      <form id="expense-form" onsubmit="window.handleSubmit(event)" novalidate>
 
         <!-- ── Group & Category ── -->
         <div class="form-row-2">
           <div class="form-group">
             <label class="form-label" for="expense-group">Group *</label>
-            <select class="form-select" id="expense-group" required onchange="onGroupChange()">
+            <select class="form-select" id="expense-group" required onchange="window.onGroupChange()">
               <option value="" disabled selected>Select a group…</option>
               <option value="goa">Goa Trip 2026</option>
               <option value="room">Room Expenses</option>
@@ -111,7 +121,7 @@
           <div class="amount-field-wrap">
             <span class="amount-prefix">₹</span>
             <input class="form-input-amount" type="number" id="expense-amount"
-              placeholder="0" min="1" step="0.01" required oninput="updateSplitPreview()" />
+              placeholder="0" min="1" step="0.01" required oninput="window.updateSplitPreview()" />
           </div>
         </div>
 
@@ -188,7 +198,7 @@
   <p>Expense added successfully!</p>
 </div>
 
-<script src="js/expense.js"></script>
+<script type="module" src="js/expense.js"></script>
 
 </body>
 </html>

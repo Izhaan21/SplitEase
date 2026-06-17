@@ -254,5 +254,12 @@ function renderBalanceSummary(transactions, currentUser) {
 }
 
 // ── Exports (used by dashboard.js and expense.js) ─────────────
-// Not using ES modules to keep it compatible with plain <script> tags.
-// Dev 3 can convert to import/export when bundling.
+export {
+  computeNetBalances,
+  simplifyDebts,
+  getUserSummary,
+  totalExpenses,
+  totalPaidBy,
+  totalOwedBy,
+  renderBalanceSummary
+};

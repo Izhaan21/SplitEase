@@ -1,19 +1,35 @@
+import { auth, db } from "./firebase.js";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  collection,
+  doc,
+  addDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  Timestamp,
+  serverTimestamp,
+} from "firebase/firestore";
+
 /* ============================================================
-   expense.js  —  SplitEase  |  dev-logic
+   expense.js  —  SplitEase  |  dev-firebase
    Handles: group selection, member chips, split preview,
-            form validation, expense object construction
-   TODO (Dev 3): Replace localStorage/console.log with Firestore write
+            form validation, expense object construction,
+            real-time Firestore group fetching and expense writing
    ============================================================ */
 
-// ── Group → Members Map ───────────────────────────────────────
-// TODO (Dev 3): Replace with a real-time Firestore query
-const GROUP_MEMBERS = {
+// ── Dynamic Group → Members Map ───────────────────────────────
+let GROUP_MEMBERS = {};
+let GROUPS_CACHE = []; // Stores the loaded groups for easy lookup
+let CURRENT_USER = 'Guest';
+
+// Mock data for Guest mode
+const GUEST_GROUP_MEMBERS = {
   goa:    ['Arif', 'Nadeem', 'Izhaan'],
   room:   ['Arif', 'Nadeem'],
   office: ['Arif', 'Izhaan', 'Nadeem'],
 };
-
-const AVATAR_COLORS = ['#22C55E', '#F59E0B', '#EF4444', '#6366F1', '#EC4899'];
 
 // ── Step Indicator Tracker ────────────────────────────────────
 const stepState = { 1: false, 2: false, 3: false, 4: false };
@@ -24,20 +40,15 @@ function markStep(n, done) {
   if (dot) dot.classList.toggle('done', done);
 }
 
-// ── Initialise page ───────────────────────────────────────────
+// ── Set default date ──────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
-  setDefaultDate();
-  preSelectGroup();
-});
-
-/** Set today's date as the default in the date field */
 function setDefaultDate() {
   const el = document.getElementById('expense-date');
   if (el) el.value = new Date().toISOString().split('T')[0];
 }
 
-/** If we arrived from dashboard "Add Expense" button, pre-select that group */
+// ── Pre-select Group from Dashboard ───────────────────────────
+
 function preSelectGroup() {
   const saved = sessionStorage.getItem('selectedGroup');
   if (!saved) return;
@@ -45,6 +56,7 @@ function preSelectGroup() {
   const sel = document.getElementById('expense-group');
   if (!sel) return;
 
+  // Search by option text
   for (const opt of sel.options) {
     if (opt.text === saved) {
       opt.selected = true;
@@ -81,6 +93,8 @@ function onGroupChange() {
   const grid = document.getElementById('members-grid');
   grid.innerHTML = '';
 
+  const AVATAR_COLORS = ['#22C55E', '#F59E0B', '#EF4444', '#6366F1', '#EC4899'];
+
   if (members.length === 0) {
     grid.innerHTML = `<p style="color:var(--muted-gray);font-size:13px;grid-column:1/-1;">
       Select a group above to see members.</p>`;
@@ -89,7 +103,7 @@ function onGroupChange() {
       const label = document.createElement('label');
       label.className = 'member-chip checked';
       label.innerHTML = `
-        <input type="checkbox" name="member" value="${m}" checked onchange="onMemberToggle(this)" />
+        <input type="checkbox" name="member" value="${m}" checked onchange="window.onMemberToggle(this)" />
         <div class="member-chip-avatar" style="background:${AVATAR_COLORS[i % AVATAR_COLORS.length]}">
           ${m.charAt(0).toUpperCase()}
         </div>
@@ -142,11 +156,6 @@ function updateSplitPreview() {
 
 // ── Form Validation ───────────────────────────────────────────
 
-/**
- * Full validation of the Add Expense form.
- * Returns the validated expense object on success, null on failure.
- * @returns {Object|null}
- */
 function validateExpenseForm() {
   const group   = document.getElementById('expense-group').value;
   const name    = document.getElementById('expense-name').value.trim();
@@ -178,7 +187,6 @@ function validateExpenseForm() {
     category,
     notes,
     date,
-    createdAt: new Date().toISOString(),
   };
 }
 
@@ -190,10 +198,8 @@ function fail(msg) {
 // ── Error Display ─────────────────────────────────────────────
 
 function showFormError(msg) {
-  // Re-use the .form-error pattern from index.html (add div to add-expense.html)
   let box = document.getElementById('expense-form-error');
   if (!box) {
-    // Fallback to alert if the error element isn't in the HTML yet
     alert(msg);
     return;
   }
@@ -202,6 +208,8 @@ function showFormError(msg) {
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// ── Clear Form Error ──────────────────────────────────────────
+
 function clearFormError() {
   const box = document.getElementById('expense-form-error');
   if (box) { box.textContent = ''; box.classList.remove('show'); }
@@ -209,33 +217,44 @@ function clearFormError() {
 
 // ── Form Submit ───────────────────────────────────────────────
 
-/**
- * Validates, builds the expense object, then hands off to Firestore (Dev 3).
- * @param {Event} e
- */
 function handleSubmit(e) {
   e.preventDefault();
   clearFormError();
 
   const expense = validateExpenseForm();
-  if (!expense) return; // validation failed — error already shown
+  if (!expense) return;
 
   markStep(3, true);
   markStep(4, true);
 
-  // ── TODO (Dev 3): Save to Firestore ──
-  // import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-  // const groupRef = doc(db, "groups", expense.group);
-  // await addDoc(collection(groupRef, "expenses"), {
-  //   ...expense,
-  //   date:      Timestamp.fromDate(new Date(expense.date)),
-  //   createdAt: serverTimestamp(),
-  // });
+  const isGuest = sessionStorage.getItem('isGuest') === 'true';
 
-  console.log('✅ Expense to save:', expense);
-
-  // Show success toast and redirect
-  showSuccessToast();
+  if (isGuest) {
+    console.log('✅ Guest Expense saved locally:', expense);
+    showSuccessToast();
+  } else {
+    // Save to Firestore
+    const groupRef = doc(db, "groups", expense.group);
+    
+    addDoc(collection(groupRef, "expenses"), {
+      desc:      expense.desc,
+      amount:    expense.amount,
+      payer:     expense.payer,
+      splitWith: expense.splitWith,
+      perPerson: expense.perPerson,
+      category:  expense.category,
+      notes:     expense.notes,
+      date:      Timestamp.fromDate(new Date(expense.date)),
+      createdAt: serverTimestamp(),
+    })
+    .then(() => {
+      showSuccessToast();
+    })
+    .catch(err => {
+      console.error("Error saving expense:", err);
+      showFormError("Failed to save expense. Please try again.");
+    });
+  }
 }
 
 // ── Success Toast ─────────────────────────────────────────────
@@ -253,3 +272,85 @@ function showSuccessToast() {
     window.location.href = 'dashboard.html';
   }, 2000);
 }
+
+// ── Populate Groups dropdown dynamically ───────────────────────
+
+function populateGroupsDropdown() {
+  const groupSelect = document.getElementById('expense-group');
+  if (!groupSelect) return;
+
+  // Clear existing hardcoded groups, keeping the first placeholder option
+  groupSelect.innerHTML = '<option value="" disabled selected>Select a group…</option>';
+
+  GROUPS_CACHE.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    groupSelect.appendChild(opt);
+  });
+
+  // Re-run preSelectGroup in case we navigated from dashboard
+  preSelectGroup();
+}
+
+function initFirebaseSync(user) {
+  CURRENT_USER = user.displayName || user.email.split('@')[0];
+
+  // Fetch groups where user is a member
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
+
+  onSnapshot(groupsQuery, (snapshot) => {
+    GROUPS_CACHE = [];
+    GROUP_MEMBERS = {};
+
+    snapshot.forEach(docSnap => {
+      const gData = docSnap.data();
+      const groupId = docSnap.id;
+      
+      GROUPS_CACHE.push({
+        id: groupId,
+        name: gData.name
+      });
+      GROUP_MEMBERS[groupId] = gData.members || [];
+    });
+
+    populateGroupsDropdown();
+  }, (error) => {
+    console.error("Error fetching groups for dropdown:", error);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  setDefaultDate();
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      initFirebaseSync(user);
+    } else {
+      if (sessionStorage.getItem('isGuest') === 'true') {
+        CURRENT_USER = 'Arif';
+        // Map guest groups
+        GROUPS_CACHE = [
+          { id: 'goa', name: 'Goa Trip 2026' },
+          { id: 'room', name: 'Room Expenses' },
+          { id: 'office', name: 'Office Lunch' }
+        ];
+        GROUP_MEMBERS = GUEST_GROUP_MEMBERS;
+        populateGroupsDropdown();
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+  });
+});
+
+// Expose handlers to window for HTML inline events
+window.onGroupChange = onGroupChange;
+window.onMemberToggle = onMemberToggle;
+window.updateSplitPreview = updateSplitPreview;
+window.handleSubmit = handleSubmit;

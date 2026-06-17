@@ -109,6 +109,16 @@
     }
     .form-error.show { display: block; }
   </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js"
+      }
+    }
+  </script>
 </head>
 <body>
 
@@ -137,8 +147,8 @@
 
       <!-- Tabs -->
       <div class="auth-tabs">
-        <button class="auth-tab active" id="tab-login"    onclick="switchTab('login')">Sign In</button>
-        <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">Register</button>
+        <button class="auth-tab active" id="tab-login"    onclick="window.switchTab('login')">Sign In</button>
+        <button class="auth-tab"        id="tab-register" onclick="window.switchTab('register')">Register</button>
       </div>
 
       <!-- Heading -->
@@ -151,7 +161,7 @@
       <div class="form-error" id="form-error"></div>
 
       <!-- ── Login Form ── -->
-      <form class="auth-form active" id="login-form" onsubmit="handleLogin(event)" novalidate>
+      <form class="auth-form active" id="login-form" onsubmit="window.handleLogin(event)" novalidate>
         <div class="form-group">
           <label class="form-label" for="login-email">Email Address</label>
           <input class="form-input" type="email" id="login-email"
@@ -179,7 +189,7 @@
       </form>
 
       <!-- ── Register Form ── -->
-      <form class="auth-form" id="register-form" onsubmit="handleRegister(event)" novalidate>
+      <form class="auth-form" id="register-form" onsubmit="window.handleRegister(event)" novalidate>
         <div class="form-group">
           <label class="form-label" for="reg-name">Full Name</label>
           <input class="form-input" type="text" id="reg-name"
@@ -207,14 +217,14 @@
 
       <!-- Divider + Guest -->
       <div class="divider"><span>or</span></div>
-      <button class="btn btn-ghost btn-full" onclick="guestLogin()">
+      <button class="btn btn-ghost btn-full" onclick="window.guestLogin()">
         Continue as Guest (Demo)
       </button>
 
     </div><!-- /auth-card -->
   </div><!-- /auth-wrap -->
 
-  <script src="js/auth.js"></script>
+  <script type="module" src="js/auth.js"></script>
 
 </body>
 </html>
