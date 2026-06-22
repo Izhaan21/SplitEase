@@ -70,7 +70,8 @@
 /* ============================================================
    MAIN CONTENT
    ============================================================ */
-.main {
+.main,
+.main-content {
   margin-left: 280px;
   flex: 1;
   padding: 28px 28px 40px;
@@ -87,6 +88,22 @@
   gap: 20px;
   margin-bottom: 32px;
   flex-wrap: wrap;
+}
+
+/* Page heading used by analytics / settings / profile */
+.page-title { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+.page-sub   { font-size: 13px; color: var(--muted-gray); }
+
+/* Hamburger button for new pages */
+.hamburger {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  padding: 8px;
+  align-items: center; justify-content: center;
+  cursor: pointer;
 }
 
 .topbar-left { display: flex; align-items: center; gap: 16px; }
@@ -509,9 +526,9 @@
     box-shadow: var(--shadow-lg);
   }
 
-  .main { margin-left: 0; padding: 18px 16px 40px; }
+  .main, .main-content { margin-left: 0; padding: 18px 16px 40px; }
 
-  .menu-btn { display: flex; }
+  .menu-btn, .hamburger { display: flex; }
 
   .topbar { margin-bottom: 22px; }
   .topbar-right { width: 100%; justify-content: space-between; }
