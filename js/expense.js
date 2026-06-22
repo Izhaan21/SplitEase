@@ -11,6 +11,7 @@ import {
   Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
+import { formatCurrency } from "./balance.js?v=3";
 
 /* ============================================================
    expense.js  —  SplitEase  |  dev-firebase
@@ -140,7 +141,7 @@ function updateSplitPreview() {
 
   if (amount > 0 && members.length > 0) {
     const each = (amount / members.length).toFixed(2);
-    document.getElementById('per-person-amount').textContent = `₹${parseFloat(each).toLocaleString('en-IN')}`;
+    document.getElementById('per-person-amount').textContent = `${formatCurrency(parseFloat(each))}`;
     preview.style.display = 'flex';
   } else {
     preview.style.display = 'none';

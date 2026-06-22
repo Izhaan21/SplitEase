@@ -52,12 +52,19 @@
  * @param {number} amount
  * @returns {string}
  */
-function formatINR(amount) {
-  const abs = Math.abs(amount);
-  const formatted = abs % 1 === 0
-    ? abs.toLocaleString('en-IN')
-    : abs.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `₹${formatted}`;
+function formatCurrency(amount) {
+  let currency = 'INR';
+  try {
+    const s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+    if (s['s-currency']) currency = s['s-currency'];
+  } catch (e) {}
+
+  if (currency === 'USDT') {
+    return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  } else if (currency === 'EUR') {
+    return '€' + amount.toLocaleString('de-DE');
+  }
+  return '₹' + amount.toLocaleString('en-IN');
 }
 
 /**
@@ -226,7 +233,7 @@ function totalOwedTo(transactions, member) {
  * @returns {number} Sum of all expense amounts
  */
 function totalExpenses(expenses) {
-  return round2(expenses.reduce((sum, e) => sum + (e.amount || 0), 0));
+  return round2(expenses.filter(e => !e.isSettlement).reduce((sum, e) => sum + (e.amount || 0), 0));
 }
 
 /**
@@ -237,7 +244,7 @@ function totalExpenses(expenses) {
 function totalPaidBy(expenses, member) {
   return round2(
     expenses
-      .filter(e => e.payer === member)
+      .filter(e => e.payer === member && !e.isSettlement)
       .reduce((sum, e) => sum + e.amount, 0)
   );
 }
@@ -297,12 +304,27 @@ const AVATAR_COLORS = ['#F59E0B', '#22C55E', '#EF4444', '#6366F1', '#EC4899', '#
  * @param {string} color
  * @returns {string} HTML string
  */
+function escapeHTML(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function buildBalanceRow(type, t, color) {
   const isOwe   = type === 'owe';
   const name    = isOwe ? t.to   : t.from;
-  const label   = isOwe ? `You owe <strong>${name}</strong>` : `<strong>${name}</strong> owes you`;
+  const safeName = escapeHTML(name);
+  const label   = isOwe ? `You owe <strong>${safeName}</strong>` : `<strong>${safeName}</strong> owes you`;
   const cls     = isOwe ? 'text-red'   : 'text-green';
   const prefix  = isOwe ? '−' : '+';
+
+  const settleBtn = isOwe
+    ? `<button class="settle-btn" title="Settle up with ${safeName}" onclick="this.classList.toggle('settling'); setTimeout(() => window.handleSettle('${t.groupId}', '${t.from}', '${t.to}', ${t.amount}), 500)">
+         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+         Settle Up
+       </button>`
+    : `<button class="settle-btn settle-btn-receive" title="Mark received from ${safeName}" onclick="this.classList.toggle('settling'); setTimeout(() => window.handleSettle('${t.groupId}', '${t.to}', '${t.from}', ${t.amount}), 500)">
+         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+         Received
+       </button>`;
 
   return `
     <div class="balance-row">
@@ -310,7 +332,10 @@ function buildBalanceRow(type, t, color) {
         <div class="avatar-sm" style="background:${color}">${name.charAt(0).toUpperCase()}</div>
         <div class="balance-info"><p>${label}</p></div>
       </div>
-      <span class="balance-amount ${cls}">${prefix}${formatINR(t.amount)}</span>
+      <div class="balance-row-right">
+        <span class="balance-amount ${cls}">${prefix}${formatCurrency(t.amount)}</span>
+        ${settleBtn}
+      </div>
     </div>`;
 }
 
@@ -353,8 +378,8 @@ function renderBalanceSummary(transactions, currentUser) {
   // ── Net balance summary bar ──
   const barColor  = netBalance >= 0 ? 'var(--primary-green)' : '#EF4444';
   const barLabel  = netBalance >= 0
-    ? `Net: you are owed <strong style="color:var(--primary-green)">${formatINR(netBalance)}</strong>`
-    : `Net: you owe <strong style="color:#EF4444">${formatINR(Math.abs(netBalance))}</strong>`;
+    ? `Net: you are owed <strong style="color:var(--primary-green)">${formatCurrency(netBalance)}</strong>`
+    : `Net: you owe <strong style="color:#EF4444">${formatCurrency(Math.abs(netBalance))}</strong>`;
 
   listEl.innerHTML = `
     <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;
@@ -376,7 +401,7 @@ function renderBalanceSummary(transactions, currentUser) {
   // ── Smart settle tip ──
   if (tipEl && transactions.length > 0) {
     const tips = transactions
-      .map(t => `<strong>${t.from}</strong> → <strong>${t.to}</strong> ${formatINR(t.amount)}`)
+      .map(t => `<strong>${t.from}</strong> → <strong>${t.to}</strong> ${formatCurrency(t.amount)}`)
       .join(' &nbsp;·&nbsp; ');
     tipEl.innerHTML = `Quickest way to settle up: ${tips}`;
     const tipContainer = tipEl.closest('.settle-tip');
@@ -386,7 +411,7 @@ function renderBalanceSummary(transactions, currentUser) {
 
 // ── Exports ───────────────────────────────────────────────────
 export {
-  formatINR,
+  formatCurrency,
   round2,
   computeNetBalances,
   isGroupSettled,

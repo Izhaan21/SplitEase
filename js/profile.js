@@ -17,6 +17,7 @@ import {
   onSnapshot,
   orderBy
 } from "firebase/firestore";
+import { formatCurrency } from "./balance.js?v=3";
 
 // ── Default Profile ───────────────────────────────────────────
 
@@ -235,9 +236,9 @@ function calculateAndRenderStats() {
 
   // Total sum of all group expenses (not just yours)
   const totalSpent = allExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const totalFormatted = totalSpent >= 1000
-    ? '₹' + (totalSpent / 1000).toFixed(1) + 'k'
-    : '₹' + totalSpent.toLocaleString('en-IN');
+  const totalFormatted = totalSpent === 0
+    ? 'No recorded expenses yet'
+    : formatCurrency(totalSpent);
 
   // Write to DOM via IDs added in profile.html
   const groupsEl   = document.getElementById('ps-groups');
@@ -354,7 +355,7 @@ function renderActivityLog() {
       activities.push({
         type: isPayer ? 'payment' : 'expense',
         text: isPayer
-          ? `You paid <strong>₹${(e.amount || 0).toLocaleString('en-IN')}</strong> for <strong>${e.desc}</strong> in ${g.name}`
+          ? `You paid <strong>${formatCurrency(e.amount || 0)}</strong> for <strong>${e.desc}</strong> in ${g.name}`
           : `<strong>${e.desc}</strong> was added to <strong>${g.name}</strong>`,
         date: e.date || new Date().toISOString(),
         ts:   new Date(e.date || 0).getTime(),

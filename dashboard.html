@@ -244,10 +244,11 @@
 <div class="modal-overlay" id="create-group-modal">
   <div class="card modal-box fade-up">
     <div class="modal-header">
-      <h2>Create New Group</h2>
+      <h2 id="group-modal-title">Create New Group</h2>
       <button class="modal-close" onclick="window.closeModal()">×</button>
     </div>
     <form onsubmit="window.handleCreateGroup(event)" novalidate>
+      <input type="hidden" id="edit-group-id" value="" />
       <div id="group-modal-error" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:10px 14px;"></div>
       <div class="form-group">
         <label class="form-label" for="new-group-name">Group Name</label>
@@ -259,13 +260,13 @@
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm">Create Group</button>
+        <button type="submit" class="btn btn-primary btn-sm" id="group-modal-submit">Create Group</button>
       </div>
     </form>
   </div>
 </div>
 
-<script type="module" src="js/dashboard.js"></script>
+<script type="module" src="js/dashboard.js?v=3"></script>
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "npx -y http-server -p 8080"
+    "dev": "npx -y http-server -p 8080 -c-1"
   },
   "dependencies": {
     "firebase": "^12.14.0"

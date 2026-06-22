@@ -129,6 +129,7 @@ function loadSettings() {
     language:   's-language',
     dateformat: 's-dateformat',
     theme:      's-theme',
+    's-currency': 's-currency',
   };
   Object.entries(selectors).forEach(([key, id]) => {
     const el = document.getElementById(id);
@@ -160,12 +161,11 @@ function saveSettings() {
   const s = {};
 
   // Dropdowns
-  const langEl  = document.getElementById('s-language');
-  const dateEl  = document.getElementById('s-dateformat');
-  const themeEl = document.getElementById('s-theme');
-  if (langEl)  s['language']   = langEl.value;
-  if (dateEl)  s['dateformat'] = dateEl.value;
-  if (themeEl) s['theme']      = themeEl.value;
+  const selects = ['s-language', 's-dateformat', 's-theme', 's-currency'];
+  selects.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) s[id === 's-currency' ? 's-currency' : id.substring(2)] = el.value;
+  });
 
   // Toggles
   [

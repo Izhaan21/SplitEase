@@ -4,6 +4,8 @@ import {
   collection,
   doc,
   addDoc,
+  updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -18,8 +20,9 @@ import {
   totalPaidBy,
   totalOwedBy,
   totalOwedTo,
-  renderBalanceSummary
-} from "./balance.js";
+  renderBalanceSummary,
+  formatCurrency
+} from "./balance.js?v=3";
 
 /* ============================================================
    dashboard.js  —  SplitEase  |  dev-firebase
@@ -59,9 +62,9 @@ function updateStatCards() {
   const owesEl   = document.querySelector('.stat-card:nth-child(3) .stat-value');
   const groupsEl = document.getElementById('groups-count');
 
-  if (totalEl)  totalEl.textContent  = '₹' + total.toLocaleString('en-IN');
-  if (paidEl)   paidEl.textContent   = '₹' + paid.toLocaleString('en-IN');
-  if (owesEl)   owesEl.textContent   = '₹' + owes.toLocaleString('en-IN');
+  if (totalEl)  totalEl.textContent  = formatCurrency(total);
+  if (paidEl)   paidEl.textContent   = formatCurrency(paid);
+  if (owesEl)   owesEl.textContent   = formatCurrency(owes);
   if (groupsEl) groupsEl.textContent = GROUPS.length;
 }
 
@@ -73,6 +76,7 @@ function getAllTransactions() {
   GROUPS.forEach(group => {
     const balances     = computeNetBalances(group.expenses || [], group.members || []);
     const transactions = simplifyDebts(balances);
+    transactions.forEach(t => t.groupId = group.id);
     allTransactions    = allTransactions.concat(transactions);
   });
   return allTransactions;
@@ -110,7 +114,15 @@ function buildGroupCard(group) {
     <div>
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
         <h3 class="group-card-name">${escapeHTML(group.name)}</h3>
-        ${statusBadge}
+        <div style="display:flex; align-items:center; gap:8px;">
+          ${statusBadge}
+          <button class="btn btn-sm btn-icon" style="background:transparent; border:none; color:var(--muted-gray); padding:4px;" title="Edit Group" onclick="window.editGroup('${group.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </button>
+          <button class="btn btn-sm btn-icon" style="background:transparent; border:none; color:var(--red); padding:4px;" title="Delete Group" onclick="window.deleteGroup('${group.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
       </div>
       <div class="group-meta">
         <div class="group-meta-row">
@@ -119,7 +131,7 @@ function buildGroupCard(group) {
         </div>
         <div class="group-meta-row">
           <span class="label">Total Spent</span>
-          <span class="value green">₹${spent.toLocaleString('en-IN')}</span>
+          <span class="value green">${formatCurrency(spent)}</span>
         </div>
         <div class="group-meta-row">
           <span class="label">Last Active</span>
@@ -170,9 +182,11 @@ function handleCreateGroup(e) {
 
   const nameInput    = document.getElementById('new-group-name');
   const membersInput = document.getElementById('new-group-members');
+  const editIdInput  = document.getElementById('edit-group-id');
 
   const name    = nameInput.value.trim();
   const rawList = membersInput.value;
+  const editId  = editIdInput ? editIdInput.value : '';
 
   // ── Validation ──
   if (!name) {
@@ -198,31 +212,48 @@ function handleCreateGroup(e) {
     members.unshift(CURRENT_USER);
   }
 
-  // Duplicate name check
-  const exists = GROUPS.find(g => g.name.toLowerCase() === name.toLowerCase());
+  // Duplicate name check (skip if editing the same group)
+  const exists = GROUPS.find(g => g.name.toLowerCase() === name.toLowerCase() && g.id !== editId);
   if (exists) {
     nameInput.focus();
     return showGroupError(`A group named "${name}" already exists.`);
   }
 
-  const newGroupData = {
-    name,
-    members,
-    createdBy: auth.currentUser.uid,
-    createdAt: serverTimestamp(),
-    status: 'pending'
-  };
+  if (editId) {
+    // Update existing group
+    const groupRef = doc(db, "groups", editId);
+    updateDoc(groupRef, { name, members })
+      .then(() => {
+        closeModal();
+        nameInput.value    = '';
+        membersInput.value = '';
+        if (editIdInput) editIdInput.value = '';
+      })
+      .catch(err => {
+        console.error("Error updating group:", err);
+        showGroupError("Failed to update group. Please try again.");
+      });
+  } else {
+    // Create new group
+    const newGroupData = {
+      name,
+      members,
+      createdBy: auth.currentUser.uid,
+      createdAt: serverTimestamp(),
+      status: 'pending'
+    };
 
-  addDoc(collection(db, "groups"), newGroupData)
-    .then(() => {
-      closeModal();
-      nameInput.value    = '';
-      membersInput.value = '';
-    })
-    .catch(err => {
-      console.error("Error creating group:", err);
-      showGroupError("Failed to create group. Please try again.");
-    });
+    addDoc(collection(db, "groups"), newGroupData)
+      .then(() => {
+        closeModal();
+        nameInput.value    = '';
+        membersInput.value = '';
+      })
+      .catch(err => {
+        console.error("Error creating group:", err);
+        showGroupError("Failed to create group. Please try again.");
+      });
+  }
 }
 
 function showGroupError(msg) {
@@ -231,14 +262,65 @@ function showGroupError(msg) {
   else alert(msg);
 }
 
+// ── Edit / Delete Group ───────────────────────────────────────
+
+function editGroup(groupId) {
+  const group = GROUPS.find(g => g.id === groupId);
+  if (!group) return;
+
+  const modalTitle = document.getElementById('group-modal-title');
+  const modalSubmit = document.getElementById('group-modal-submit');
+  if (modalTitle) modalTitle.textContent = 'Edit Group';
+  if (modalSubmit) modalSubmit.textContent = 'Save Changes';
+
+  document.getElementById('edit-group-id').value = group.id;
+  document.getElementById('new-group-name').value = group.name;
+  document.getElementById('new-group-members').value = group.members.join(', ');
+
+  openModal();
+}
+
+function deleteGroup(groupId) {
+  const group = GROUPS.find(g => g.id === groupId);
+  if (!group) return;
+
+  if (confirm(`Are you sure you want to delete the group "${group.name}"? This action cannot be undone.`)) {
+    deleteDoc(doc(db, "groups", groupId))
+      .then(() => console.log('Group deleted'))
+      .catch(err => console.error('Error deleting group:', err));
+  }
+}
+
 // ── View Group ────────────────────────────────────────────────
 
 function viewGroup(groupId) {
   const group = GROUPS.find(g => g.id === groupId);
   if (!group) return;
   sessionStorage.setItem('viewGroupId', groupId);
-  console.log('View group:', group.name);
-  alert(`Group details for "${group.name}" coming soon!`);
+  window.location.href = 'group.html';
+}
+
+// ── Settle Up ─────────────────────────────────────────────────
+
+function handleSettle(groupId, from, to, amount) {
+  if (!confirm(`Record a settlement of ₹${amount} from ${from} to ${to}?`)) return;
+  
+  const newExp = {
+    desc: 'Settled up',
+    amount: amount,
+    payer: from,
+    splitWith: [to],
+    category: 'settlement',
+    isSettlement: true,
+    date: new Date().toISOString()
+  };
+  
+  addDoc(collection(db, "groups", groupId, "expenses"), newExp)
+    .then(() => alert(`Successfully recorded settlement from ${from} to ${to}!`))
+    .catch(err => {
+      console.error("Error settling:", err);
+      alert("Failed to settle. Please try again.");
+    });
 }
 
 // ── Navigate to Add Expense ───────────────────────────────────
@@ -284,7 +366,7 @@ function renderRecentExpenses() {
         </div>
       </div>
       <div class="expense-right">
-        <div class="expense-amount">₹${exp.amount.toLocaleString('en-IN')}</div>
+        <div class="expense-amount">${formatCurrency(exp.amount)}</div>
         <div class="expense-date">${formatRelativeDate(exp.date)}</div>
       </div>
     </div>
@@ -347,6 +429,16 @@ function closeModal() {
   if (modal) modal.classList.remove('open');
   const err = document.getElementById('group-modal-error');
   if (err) { err.textContent = ''; err.style.display = 'none'; }
+  
+  // Reset fields to create mode
+  document.getElementById('new-group-name').value = '';
+  document.getElementById('new-group-members').value = '';
+  document.getElementById('edit-group-id').value = '';
+  
+  const modalTitle = document.getElementById('group-modal-title');
+  const modalSubmit = document.getElementById('group-modal-submit');
+  if (modalTitle) modalTitle.textContent = 'Create New Group';
+  if (modalSubmit) modalSubmit.textContent = 'Create Group';
 }
 
 // ── Sidebar (mobile) ──────────────────────────────────────────
@@ -385,7 +477,7 @@ function formatRelativeDate(dateStr) {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
-// ── Firebase Real-time Synchronization ─────────────────────────
+// ── Firebase Real-time Synchronization ────────────────────────
 
 function initFirebaseSync(user) {
   CURRENT_USER = user.displayName || user.email.split('@')[0];
@@ -461,6 +553,7 @@ function initFirebaseSync(user) {
               perPerson: expData.perPerson,
               date: expData.date ? (expData.date.toDate ? expData.date.toDate().toISOString().split('T')[0] : expData.date) : new Date().toISOString().split('T')[0],
               category: expData.category || 'other',
+              isSettlement: expData.isSettlement || expData.category === 'settlement' || expData.desc === 'Settled up',
               notes: expData.notes || '',
               createdAt: expData.createdAt
             });
@@ -548,3 +641,6 @@ window.handleSearch = handleSearch;
 window.viewGroup = viewGroup;
 window.goToAddExpense = goToAddExpense;
 window.handleLogout = handleLogout;
+window.editGroup = editGroup;
+window.deleteGroup = deleteGroup;
+window.handleSettle = handleSettle;
