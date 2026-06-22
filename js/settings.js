@@ -1,14 +1,31 @@
 /* ============================================================
-   settings.js  —  SplitEase  |  dev-logic
+   settings.js  —  SplitEase  |  dev-firebase
    Handles: tab switching, localStorage settings persistence,
             compact mode / animations class application,
-            change password validation (mock for Guest mode),
+            change password validation and updates via Firebase Auth,
             2FA badge toggle, and all Danger Zone actions.
-
-   Firebase Note: Danger zone actions operate on localStorage
-   for Guest/Demo mode. The firebase dev will add Firestore
-   deletions / signOut calls at each TODO comment below.
    ============================================================ */
+
+import { auth, db } from "./firebase.js";
+import {
+  onAuthStateChanged,
+  signOut,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser
+} from "firebase/auth";
+import {
+  doc,
+  collection,
+  query,
+  where,
+  getDocs,
+  writeBatch,
+  deleteDoc
+} from "firebase/firestore";
+
+let CURRENT_USER = '';
 
 // ── Apply Preferences ─────────────────────────────────────────
 
@@ -41,14 +58,19 @@ function closeSidebar() {
 // ── Logout ────────────────────────────────────────────────────
 
 /**
- * Clears guest session and redirects to login.
- * TODO (Dev Firebase): Also call signOut(auth) for real users.
+ * Clears session and redirects to login.
  * @param {Event} e
  */
 function handleLogout(e) {
   if (e) e.preventDefault();
-  sessionStorage.removeItem('isGuest');
-  window.location.href = 'index.html';
+  signOut(auth)
+    .then(() => {
+      window.location.href = 'index.html';
+    })
+    .catch(err => {
+      console.error("Signout failed:", err);
+      window.location.href = 'index.html';
+    });
 }
 
 // ── Tab Switching ─────────────────────────────────────────────
@@ -138,11 +160,6 @@ function saveSettings() {
   const s = {};
 
   // Dropdowns
-  ['s-language', 's-dateformat', 's-theme'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) s[id.replace('s-', '')] = el.value;
-  });
-  // Fix: use full key for language/dateformat/theme
   const langEl  = document.getElementById('s-language');
   const dateEl  = document.getElementById('s-dateformat');
   const themeEl = document.getElementById('s-theme');
@@ -216,15 +233,10 @@ function resetGeneral() {
   showToast('🔄', 'Settings reset to default.');
 }
 
-// ── Change Password (validation only — no Firebase here) ──────
+// ── Change Password ───────────────────────────────────────────
 
 /**
- * Validates the change-password modal fields and shows a
- * success toast on pass. Leaves all Firebase calls to dev-firebase.
- *
- * TODO (Dev Firebase): Replace the close/toast block with
- *   reauthenticateWithCredential(auth.currentUser, credential)
- *   .then(() => updatePassword(auth.currentUser, newPassword))
+ * Validates password fields and updates the user's password via Firebase Auth.
  */
 function changePassword() {
   const cur  = (document.getElementById('pw-current')?.value  || '').trim();
@@ -236,14 +248,36 @@ function changePassword() {
   if (nw.length < 6)  { showToast('❌', 'New password must be at least 6 characters.', true); return; }
   if (nw !== conf)    { showToast('❌', 'New passwords do not match.', true); return; }
 
-  // Clear and close
-  closeModal('modal-password');
-  ['pw-current', 'pw-new', 'pw-confirm'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
+  const user = auth.currentUser;
+  if (!user) {
+    showToast('❌', 'No user logged in.', true);
+    return;
+  }
 
-  showToast('🔑', 'Password updated successfully!');
+  const isGoogle = user.providerData.some(p => p.providerId === 'google.com');
+  if (isGoogle) {
+    showToast('❌', 'Google sign-in users cannot update password here.', true);
+    return;
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, cur);
+  
+  reauthenticateWithCredential(user, credential)
+    .then(() => {
+      return updatePassword(user, nw);
+    })
+    .then(() => {
+      closeModal('modal-password');
+      ['pw-current', 'pw-new', 'pw-confirm'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      showToast('🔑', 'Password updated successfully!');
+    })
+    .catch(err => {
+      console.error("Password update error:", err);
+      showToast('❌', 'Failed to update password: ' + err.message, true);
+    });
 }
 
 // ── 2FA Toggle ────────────────────────────────────────────────
@@ -321,112 +355,206 @@ function executeDanger() {
 // ── Danger: Clear Expense History ─────────────────────────────
 
 /**
- * Wipes expenses from every guest group in localStorage.
- * On the dashboard, groups will re-render with 0 expenses.
+ * Wipes expenses from group documents where current user is payer.
  */
 function _clearExpenseHistory() {
-  const raw = localStorage.getItem('splitease_guest_groups');
-  let groups;
+  const user = auth.currentUser;
+  if (!user) return;
 
-  if (raw) {
-    groups = JSON.parse(raw);
-    groups.forEach(g => { g.expenses = []; });
-  } else {
-    // Write cleared version of the defaults so dashboard picks it up
-    groups = [
-      { id: 'goa',    name: 'Goa Trip 2026',  members: ['Arif','Nadeem','Izhaan'], createdBy: 'Arif',   createdAt: '2026-06-10T10:00:00.000Z', expenses: [], status: 'settled' },
-      { id: 'room',   name: 'Room Expenses',  members: ['Arif','Nadeem'],           createdBy: 'Nadeem', createdAt: '2026-06-01T08:00:00.000Z', expenses: [], status: 'pending' },
-      { id: 'office', name: 'Office Lunch',   members: ['Arif','Izhaan','Nadeem'],  createdBy: 'Arif',   createdAt: '2026-06-12T12:00:00.000Z', expenses: [], status: 'pending' },
-    ];
-  }
+  // Get all groups containing user
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
 
-  localStorage.setItem('splitease_guest_groups', JSON.stringify(groups));
+  getDocs(groupsQuery)
+    .then(snapshot => {
+      const promises = [];
+      snapshot.forEach(groupDoc => {
+        const groupId = groupDoc.id;
+        const expensesQuery = query(
+          collection(db, "groups", groupId, "expenses"),
+          where("payer", "==", CURRENT_USER)
+        );
 
-  // TODO (Dev Firebase): Batch delete all expense subcollections in Firestore here.
-  showToast('🗑️', 'All expense history has been cleared.');
+        const p = getDocs(expensesQuery).then(expSnap => {
+          const batch = writeBatch(db);
+          expSnap.forEach(expDoc => {
+            batch.delete(expDoc.ref);
+          });
+          return batch.commit();
+        });
+        promises.push(p);
+      });
+      return Promise.all(promises);
+    })
+    .then(() => {
+      showToast('🗑️', 'All your recorded expenses have been cleared.');
+    })
+    .catch(err => {
+      console.error("Error clearing expenses:", err);
+      showToast('❌', 'Failed to clear expenses.', true);
+    });
 }
 
 // ── Danger: Leave All Groups ──────────────────────────────────
 
 /**
- * Removes the current user from the `members` array of every
- * group in localStorage.
+ * Removes the current user from the `members` array of every group.
  */
 function _leaveAllGroups() {
-  const profile = JSON.parse(localStorage.getItem('splitease_profile') || '{}');
-  const me = (profile.fname || 'Arif').toLowerCase();
+  const user = auth.currentUser;
+  if (!user) return;
 
-  const raw    = localStorage.getItem('splitease_guest_groups');
-  const groups = raw ? JSON.parse(raw) : [];
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
 
-  groups.forEach(g => {
-    g.members = (g.members || []).filter(m => m.toLowerCase() !== me);
-  });
-
-  localStorage.setItem('splitease_guest_groups', JSON.stringify(groups));
-
-  // TODO (Dev Firebase): Use arrayRemove on each group's members field in Firestore here.
-  showToast('👋', 'You have been removed from all groups.');
+  getDocs(groupsQuery)
+    .then(snapshot => {
+      const batch = writeBatch(db);
+      snapshot.forEach(groupDoc => {
+        const members = groupDoc.data().members || [];
+        const updatedMembers = members.filter(m => m.toLowerCase() !== CURRENT_USER.toLowerCase());
+        batch.update(groupDoc.ref, { members: updatedMembers });
+      });
+      return batch.commit();
+    })
+    .then(() => {
+      showToast('👋', 'You have been removed from all groups.');
+    })
+    .catch(err => {
+      console.error("Error leaving groups:", err);
+      showToast('❌', 'Failed to leave groups.', true);
+    });
 }
 
 // ── Danger: Delete Account ────────────────────────────────────
 
 /**
- * Clears all `splitease_*` keys from localStorage, removes
- * the guest session flag, then redirects to the login page.
+ * Deletes user profile data, removes them from all groups, then deletes the auth account.
  */
 function _deleteAccount() {
-  // Clear all app data from localStorage
-  Object.keys(localStorage)
-    .filter(k => k.startsWith('splitease_'))
-    .forEach(k => localStorage.removeItem(k));
+  const user = auth.currentUser;
+  if (!user) return;
 
-  sessionStorage.removeItem('isGuest');
+  // 1. Leave all groups
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
 
-  // TODO (Dev Firebase): delete(auth.currentUser) here, then
-  //   delete the /users/{uid} Firestore document.
+  let groupPromise = getDocs(groupsQuery)
+    .then(snapshot => {
+      const batch = writeBatch(db);
+      snapshot.forEach(groupDoc => {
+        const members = groupDoc.data().members || [];
+        const updatedMembers = members.filter(m => m.toLowerCase() !== CURRENT_USER.toLowerCase());
+        batch.update(groupDoc.ref, { members: updatedMembers });
+      });
+      return batch.commit();
+    });
 
-  showToast('💀', 'Account deleted. Redirecting…');
-  setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+  // 2. Delete user profile
+  const userRef = doc(db, "users", user.uid);
+  let userDocPromise = deleteDoc(userRef);
+
+  Promise.all([groupPromise, userDocPromise])
+    .then(() => {
+      // 3. Delete Auth account
+      return deleteUser(user);
+    })
+    .then(() => {
+      showToast('💀', 'Account deleted. Redirecting…');
+      setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+    })
+    .catch(err => {
+      console.error("Error deleting account:", err);
+      if (err.code === 'auth/requires-recent-login') {
+        showToast('❌', 'Action requires a recent login. Please sign out and sign in again.', true);
+      } else {
+        showToast('❌', 'Failed to delete account: ' + err.message, true);
+      }
+    });
 }
 
 // ── Export Data ───────────────────────────────────────────────
 
 /**
- * Builds a JSON export file from real localStorage data and
- * triggers a browser download.
+ * Builds a JSON export file and triggers a browser download.
  */
 function exportData() {
-  const settings = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
-  const profile  = JSON.parse(localStorage.getItem('splitease_profile')  || '{}');
-  const rawGroups = localStorage.getItem('splitease_guest_groups');
+  const user = auth.currentUser;
+  if (!user) return;
 
-  const groups = rawGroups ? JSON.parse(rawGroups) : [
-    { name: 'Goa Trip 2026',  members: ['Arif','Nadeem','Izhaan'], expenses: [] },
-    { name: 'Room Expenses',  members: ['Arif','Nadeem'],           expenses: [] },
-    { name: 'Office Lunch',   members: ['Arif','Izhaan','Nadeem'],  expenses: [] },
-  ];
+  const btn = document.querySelector('[onclick="exportData()"]');
+  if (btn) btn.disabled = true;
 
-  const payload = {
-    exported: new Date().toISOString(),
-    user: {
-      name:  [profile.fname, profile.lname].filter(Boolean).join(' ') || 'Arif Karim',
-      email: profile.email || 'arif@example.com',
-      phone: profile.phone || '',
-      upi:   profile.upi   || '',
-    },
-    settings,
-    groups,
-    note: 'In production, full Firestore data will be included here.',
-  };
+  // Get groups
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = `splitease_export_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
+  getDocs(groupsQuery)
+    .then(snapshot => {
+      const groupPromises = [];
+      snapshot.forEach(groupDoc => {
+        const gData = groupDoc.data();
+        const groupId = groupDoc.id;
+        const expensesQuery = collection(db, "groups", groupId, "expenses");
+        
+        const p = getDocs(expensesQuery).then(expSnap => {
+          const expenses = [];
+          expSnap.forEach(expDoc => {
+            const eData = expDoc.data();
+            expenses.push({
+              desc: eData.desc,
+              amount: eData.amount,
+              payer: eData.payer,
+              splitWith: eData.splitWith || [],
+              date: eData.date ? (eData.date.toDate ? eData.date.toDate().toISOString() : eData.date) : ''
+            });
+          });
+          return {
+            id: groupId,
+            name: gData.name,
+            members: gData.members || [],
+            expenses
+          };
+        });
+        groupPromises.push(p);
+      });
+      return Promise.all(groupPromises);
+    })
+    .then(groupsData => {
+      const settings = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+      const payload = {
+        exported: new Date().toISOString(),
+        user: {
+          name: user.displayName || CURRENT_USER,
+          email: user.email,
+          uid: user.uid
+        },
+        settings,
+        groups: groupsData
+      };
 
-  showToast('⬇️', 'Data exported successfully!');
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = `splitease_export_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+
+      showToast('⬇️', 'Data exported successfully!');
+      if (btn) btn.disabled = false;
+    })
+    .catch(err => {
+      console.error("Export failed:", err);
+      showToast('❌', 'Data export failed.', true);
+      if (btn) btn.disabled = false;
+    });
 }
 
 // ── Expose to window (for inline onclick handlers in HTML) ────
@@ -455,6 +583,14 @@ window.handleLogout      = handleLogout;
 document.addEventListener('DOMContentLoaded', () => {
   applyPreferences();
   loadSettings();
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      CURRENT_USER = user.displayName || user.email.split('@')[0];
+    } else {
+      window.location.href = 'index.html';
+    }
+  });
 
   // Close any open modal on Escape key
   window.addEventListener('keydown', e => {

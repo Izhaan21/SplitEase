@@ -94,7 +94,6 @@ function handleLogin(e) {
   if (pass.length < 6) return showError('Password must be at least 6 characters.');
 
   setLoading('btn-login', true, 'Sign In');
-  sessionStorage.removeItem('isGuest');
 
   signInWithEmailAndPassword(auth, email, pass)
     .then(userCredential => {
@@ -131,7 +130,6 @@ function handleRegister(e) {
   if (pass !== confirm)     return showError('Passwords do not match. Please try again.');
 
   setLoading('btn-register', true, 'Create Account');
-  sessionStorage.removeItem('isGuest');
 
   createUserWithEmailAndPassword(auth, email, pass)
     .then(userCredential => {
@@ -154,29 +152,6 @@ function handleRegister(e) {
     });
 }
 
-// ── Guest Login ───────────────────────────────────────────────
-
-function guestLogin() {
-  sessionStorage.setItem('isGuest', 'true');
-  window.location.href = 'dashboard.html';
-}
-
-// ── Google Login (UI Demo Stub) ───────────────────────────────
-
-function handleGoogleLogin() {
-  clearError();
-  setLoading('btn-google', true, 'Signing in…');
-  
-  // TODO (Dev 3): Replace this block with Firebase Google Auth integration:
-  // import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-  // const provider = new GoogleAuthProvider();
-  // signInWithPopup(auth, provider).then(...)
-  
-  setTimeout(() => {
-    sessionStorage.setItem('isGuest', 'true');
-    window.location.href = 'dashboard.html';
-  }, 800);
-}
 
 // ── Firebase Error Code Mapper (for Dev 3 to use) ─────────────
 
@@ -221,7 +196,6 @@ function googleLogin() {
       }, { merge: true });
     })
     .then(() => {
-      sessionStorage.removeItem('isGuest');
       window.location.href = 'dashboard.html';
     })
     .catch(err => {
@@ -234,5 +208,4 @@ function googleLogin() {
 window.switchTab     = switchTab;
 window.handleLogin   = handleLogin;
 window.handleRegister = handleRegister;
-window.guestLogin    = guestLogin;
 window.googleLogin   = googleLogin; // ← Dev 1 uses this for the Google button

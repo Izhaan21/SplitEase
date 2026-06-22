@@ -22,14 +22,7 @@ import {
 // ── Dynamic Group → Members Map ───────────────────────────────
 let GROUP_MEMBERS = {};
 let GROUPS_CACHE = []; // Stores the loaded groups for easy lookup
-let CURRENT_USER = 'Guest';
-
-// Mock data for Guest mode
-const GUEST_GROUP_MEMBERS = {
-  goa: ['Arif', 'Nadeem', 'Izhaan'],
-  room: ['Arif', 'Nadeem'],
-  office: ['Arif', 'Izhaan', 'Nadeem'],
-};
+let CURRENT_USER = '';
 
 // ── Step Indicator Tracker ────────────────────────────────────
 const stepState = { 1: false, 2: false, 3: false, 4: false };
@@ -227,59 +220,27 @@ function handleSubmit(e) {
   markStep(3, true);
   markStep(4, true);
 
-  const isGuest = sessionStorage.getItem('isGuest') === 'true';
+  // Save to Firestore
+  const groupRef = doc(db, "groups", expense.group);
 
-  if (isGuest) {
-    // Persist new expense to localStorage so dashboard / profile reflect it
-    const GUEST_DEFAULTS = [
-      { id:'goa',    name:'Goa Trip 2026',  members:['Arif','Nadeem','Izhaan'], createdBy:'Arif',   createdAt:'2026-06-10T10:00:00.000Z', status:'settled', expenses:[{desc:"Dinner at Ocean's",amount:3000,payer:'Arif',   splitWith:['Arif','Nadeem','Izhaan'],perPerson:1000,date:'2026-06-16',category:'food'},{desc:'Uber Ride',amount:1500,payer:'Izhaan',splitWith:['Arif','Nadeem','Izhaan'],perPerson:500, date:'2026-06-15',category:'transport'}] },
-      { id:'room',   name:'Room Expenses',  members:['Arif','Nadeem'],           createdBy:'Nadeem', createdAt:'2026-06-01T08:00:00.000Z', status:'pending', expenses:[{desc:'Room Rent',amount:4500,payer:'Nadeem',splitWith:['Arif','Nadeem'],perPerson:2250,date:'2026-06-14',category:'accommodation'}] },
-      { id:'office', name:'Office Lunch',   members:['Arif','Izhaan','Nadeem'],  createdBy:'Arif',   createdAt:'2026-06-12T12:00:00.000Z', status:'pending', expenses:[{desc:'Office Pizza',amount:950,payer:'Arif',splitWith:['Arif','Izhaan','Nadeem'],perPerson:316.67,date:'2026-06-13',category:'food'}] },
-    ];
-
-    const rawGroups   = localStorage.getItem('splitease_guest_groups');
-    const groups      = rawGroups ? JSON.parse(rawGroups) : GUEST_DEFAULTS;
-    const targetGroup = groups.find(g => g.id === expense.group);
-
-    if (targetGroup) {
-      if (!targetGroup.expenses) targetGroup.expenses = [];
-      targetGroup.expenses.push({
-        desc:      expense.desc,
-        amount:    expense.amount,
-        payer:     expense.payer,
-        splitWith: expense.splitWith,
-        perPerson: expense.perPerson,
-        category:  expense.category,
-        notes:     expense.notes || '',
-        date:      expense.date,
-      });
-      localStorage.setItem('splitease_guest_groups', JSON.stringify(groups));
-    }
-
-    showSuccessToast();
-  } else {
-    // Save to Firestore
-    const groupRef = doc(db, "groups", expense.group);
-
-    addDoc(collection(groupRef, "expenses"), {
-      desc: expense.desc,
-      amount: expense.amount,
-      payer: expense.payer,
-      splitWith: expense.splitWith,
-      perPerson: expense.perPerson,
-      category: expense.category,
-      notes: expense.notes,
-      date: Timestamp.fromDate(new Date(expense.date)),
-      createdAt: serverTimestamp(),
+  addDoc(collection(groupRef, "expenses"), {
+    desc: expense.desc,
+    amount: expense.amount,
+    payer: expense.payer,
+    splitWith: expense.splitWith,
+    perPerson: expense.perPerson,
+    category: expense.category,
+    notes: expense.notes,
+    date: Timestamp.fromDate(new Date(expense.date)),
+    createdAt: serverTimestamp(),
+  })
+    .then(() => {
+      showSuccessToast();
     })
-      .then(() => {
-        showSuccessToast();
-      })
-      .catch(err => {
-        console.error("Error saving expense:", err);
-        showFormError("Failed to save expense. Please try again.");
-      });
-  }
+    .catch(err => {
+      console.error("Error saving expense:", err);
+      showFormError("Failed to save expense. Please try again.");
+    });
 }
 
 // ── Success Toast ─────────────────────────────────────────────
@@ -357,19 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) {
       initFirebaseSync(user);
     } else {
-      if (sessionStorage.getItem('isGuest') === 'true') {
-        CURRENT_USER = 'Arif';
-        // Map guest groups
-        GROUPS_CACHE = [
-          { id: 'goa', name: 'Goa Trip 2026' },
-          { id: 'room', name: 'Room Expenses' },
-          { id: 'office', name: 'Office Lunch' }
-        ];
-        GROUP_MEMBERS = GUEST_GROUP_MEMBERS;
-        populateGroupsDropdown();
-      } else {
-        window.location.href = 'index.html';
-      }
+      window.location.href = 'index.html';
     }
   });
 });

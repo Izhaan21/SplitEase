@@ -1,43 +1,22 @@
 /* ============================================================
-   profile.js  —  SplitEase  |  dev-logic
-   Handles: profile load/save (localStorage), dynamic stats
+   profile.js  —  SplitEase  |  dev-firebase
+   Handles: profile load/save (Firestore / Auth), dynamic stats
             calculation, group badges, activity log,
             sidebar, logout, and preferences application.
-
-   Firebase Note: All localStorage calls are intentionally
-   local for Guest/Demo mode. The firebase dev will replace
-   getProfile()/saveProfileData() with Firestore read/write.
    ============================================================ */
 
-// ── Default Guest Groups (mirrors dashboard.js GUEST_GROUPS) ──
-
-const GUEST_GROUPS_DEFAULT = [
-  {
-    id: 'goa', name: 'Goa Trip 2026',
-    members: ['Arif', 'Nadeem', 'Izhaan'],
-    createdBy: 'Arif', createdAt: '2026-06-10T10:00:00.000Z',
-    expenses: [
-      { desc: "Dinner at Ocean's", amount: 3000, payer: 'Arif',   splitWith: ['Arif','Nadeem','Izhaan'], date: '2026-06-16', category: 'food' },
-      { desc: 'Uber Ride',         amount: 1500, payer: 'Izhaan', splitWith: ['Arif','Nadeem','Izhaan'], date: '2026-06-15', category: 'transport' },
-    ],
-  },
-  {
-    id: 'room', name: 'Room Expenses',
-    members: ['Arif', 'Nadeem'],
-    createdBy: 'Nadeem', createdAt: '2026-06-01T08:00:00.000Z',
-    expenses: [
-      { desc: 'Room Rent', amount: 4500, payer: 'Nadeem', splitWith: ['Arif','Nadeem'], date: '2026-06-14', category: 'accommodation' },
-    ],
-  },
-  {
-    id: 'office', name: 'Office Lunch',
-    members: ['Arif', 'Izhaan', 'Nadeem'],
-    createdBy: 'Arif', createdAt: '2026-06-12T12:00:00.000Z',
-    expenses: [
-      { desc: 'Office Pizza', amount: 950, payer: 'Arif', splitWith: ['Arif','Izhaan','Nadeem'], date: '2026-06-13', category: 'food' },
-    ],
-  },
-];
+import { auth, db } from "./firebase.js";
+import { onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy
+} from "firebase/firestore";
 
 // ── Default Profile ───────────────────────────────────────────
 
@@ -50,17 +29,10 @@ const DEFAULT_PROFILE = {
   bio:   '',
 };
 
-// ── Data Helpers ──────────────────────────────────────────────
-
-/**
- * Returns the active groups list — from localStorage if saved,
- * otherwise falls back to the default guest data.
- * @returns {Object[]}
- */
-function getGroups() {
-  const raw = localStorage.getItem('splitease_guest_groups');
-  return raw ? JSON.parse(raw) : GUEST_GROUPS_DEFAULT;
-}
+let GROUPS = [];
+let CURRENT_USER = '';
+let groupsListener = null;
+let expenseListeners = {};
 
 /**
  * Returns the saved profile merged with defaults.
@@ -100,15 +72,22 @@ function closeSidebar() {
 
 // ── Logout ────────────────────────────────────────────────────
 
-/**
- * Clears guest session and redirects to login.
- * TODO (Dev Firebase): Call signOut(auth) here for real users.
- * @param {Event} e
- */
 function handleLogout(e) {
   if (e) e.preventDefault();
-  sessionStorage.removeItem('isGuest');
-  window.location.href = 'index.html';
+  
+  // Unsubscribe from active listeners
+  if (groupsListener) groupsListener();
+  Object.values(expenseListeners).forEach(unsubscribe => unsubscribe());
+  expenseListeners = {};
+
+  signOut(auth)
+    .then(() => {
+      window.location.href = 'index.html';
+    })
+    .catch(err => {
+      console.error("Signout failed:", err);
+      window.location.href = 'index.html';
+    });
 }
 
 // ── Toast ─────────────────────────────────────────────────────
@@ -163,7 +142,7 @@ function _updateDisplayCard(p) {
 // ── Save Profile ──────────────────────────────────────────────
 
 /**
- * Reads form inputs, validates, saves to localStorage, and
+ * Reads form inputs, validates, saves to Firestore or localStorage, and
  * refreshes the display card. Exposed as window.saveProfile.
  */
 function saveProfile() {
@@ -185,22 +164,49 @@ function saveProfile() {
     return;
   }
 
-  // Merge with existing (preserves email which is disabled in the form)
-  const existing = getProfile();
-  const updated  = { ...existing, fname, lname, phone, upi, bio };
-  localStorage.setItem('splitease_profile', JSON.stringify(updated));
+  const fullName = [fname, lname].filter(Boolean).join(' ');
 
-  _updateDisplayCard(updated);
-
-  // Button feedback
   const btn = document.getElementById('save-profile-btn');
   if (btn) {
-    btn.textContent = 'Saved ✓';
+    btn.textContent = 'Saving…';
     btn.disabled    = true;
-    setTimeout(() => { btn.textContent = 'Save Changes'; btn.disabled = false; }, 2000);
   }
 
-  showProfileToast('✅', 'Profile updated successfully!');
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userRef = doc(db, "users", user.uid);
+  const updated = {
+    name: fullName,
+    firstName: fname,
+    lastName: lname,
+    email: user.email,
+    phone: phone,
+    upi: upi,
+    bio: bio,
+    updatedAt: new Date().toISOString()
+  };
+
+  updateProfile(user, { displayName: fullName })
+    .then(() => {
+      return setDoc(userRef, updated, { merge: true });
+    })
+    .then(() => {
+      _updateDisplayCard({ fname, lname, email: user.email });
+      showProfileToast('✅', 'Profile updated successfully!');
+      if (btn) {
+        btn.textContent = 'Saved ✓';
+        setTimeout(() => { btn.textContent = 'Save Changes'; btn.disabled = false; }, 2000);
+      }
+    })
+    .catch(err => {
+      console.error("Error updating profile:", err);
+      showProfileToast('❌', 'Failed to update profile.', true);
+      if (btn) {
+        btn.textContent = 'Save Changes';
+        btn.disabled    = false;
+      }
+    });
 }
 
 // ── Dynamic Stats ─────────────────────────────────────────────
@@ -210,9 +216,8 @@ function saveProfile() {
  * user and updates the three profile stat elements.
  */
 function calculateAndRenderStats() {
-  const p      = getProfile();
-  const me     = p.fname || 'Arif';
-  const groups = getGroups();
+  let me = CURRENT_USER;
+  let groups = GROUPS;
 
   // Groups the current user belongs to
   const myGroups = groups.filter(g =>
@@ -253,9 +258,9 @@ function renderGroupsBadges() {
   const container = document.getElementById('groups-badges-container');
   if (!container) return;
 
-  const p        = getProfile();
-  const me       = p.fname || 'Arif';
-  const groups   = getGroups();
+  let me = CURRENT_USER;
+  let groups = GROUPS;
+
   const myGroups = groups.filter(g =>
     g.members.some(m => m.toLowerCase() === me.toLowerCase())
   );
@@ -315,16 +320,15 @@ function _activityRow(type, text, dateStr) {
 }
 
 /**
- * Reads groups/expenses from localStorage and renders a real
- * activity stream in the profile activity card.
+ * Reads groups/expenses and renders a real activity stream.
  */
 function renderActivityLog() {
   const container = document.getElementById('activity-list');
   if (!container) return;
 
-  const p        = getProfile();
-  const me       = p.fname || 'Arif';
-  const groups   = getGroups();
+  let me = CURRENT_USER;
+  let groups = GROUPS;
+
   const myGroups = groups.filter(g =>
     g.members.some(m => m.toLowerCase() === me.toLowerCase())
   );
@@ -332,7 +336,7 @@ function renderActivityLog() {
   const activities = [];
 
   myGroups.forEach(g => {
-    const amCreator = (g.createdBy || '').toLowerCase() === me.toLowerCase();
+    const amCreator = g.createdBy === auth.currentUser?.uid;
 
     // Group created/joined event
     activities.push({
@@ -367,6 +371,141 @@ function renderActivityLog() {
     : `<div style="padding:24px;text-align:center;color:var(--muted-gray);font-size:13px;">No recent activity yet.</div>`;
 }
 
+// ── Firebase Real-time Sync ───────────────────────────────────
+
+function initFirebaseSync(user) {
+  CURRENT_USER = user.displayName || user.email.split('@')[0];
+
+  // Fetch Firestore Profile fields
+  const userRef = doc(db, "users", user.uid);
+  getDoc(userRef)
+    .then(docSnap => {
+      let p = {
+        fname: CURRENT_USER,
+        lname: '',
+        email: user.email,
+        phone: '',
+        upi: '',
+        bio: ''
+      };
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const names = (data.name || CURRENT_USER).split(' ');
+        p.fname = data.firstName || names[0] || '';
+        p.lname = data.lastName || names.slice(1).join(' ') || '';
+        p.email = data.email || user.email;
+        p.phone = data.phone || '';
+        p.upi   = data.upi   || '';
+        p.bio   = data.bio   || '';
+      }
+
+      // Populate input fields
+      ['fname', 'lname', 'email', 'phone', 'upi', 'bio'].forEach(key => {
+        const el = document.getElementById(`inp-${key}`);
+        if (el) el.value = p[key] || '';
+      });
+
+      _updateDisplayCard(p);
+    })
+    .catch(err => {
+      console.error("Error loading user profile:", err);
+    });
+
+  // Real-time query for groups containing current user
+  const groupsQuery = query(
+    collection(db, "groups"),
+    where("members", "array-contains", CURRENT_USER)
+  );
+
+  groupsListener = onSnapshot(groupsQuery, (snapshot) => {
+    const activeGroupIds = [];
+    const newGroupsMap = {};
+
+    snapshot.forEach(docSnap => {
+      const gData = docSnap.data();
+      const groupId = docSnap.id;
+      activeGroupIds.push(groupId);
+
+      newGroupsMap[groupId] = {
+        id: groupId,
+        name: gData.name,
+        members: gData.members || [],
+        createdBy: gData.createdBy,
+        createdAt: gData.createdAt ? (gData.createdAt.toDate ? gData.createdAt.toDate().toISOString() : gData.createdAt) : new Date().toISOString(),
+        status: gData.status || 'pending',
+        expenses: []
+      };
+    });
+
+    // Unsubscribe from removed groups
+    Object.keys(expenseListeners).forEach(gid => {
+      if (!activeGroupIds.includes(gid)) {
+        expenseListeners[gid]();
+        delete expenseListeners[gid];
+      }
+    });
+
+    if (activeGroupIds.length === 0) {
+      GROUPS = [];
+      updateFirebaseUI();
+      return;
+    }
+
+    // Set up or maintain subcollection listeners for active groups
+    activeGroupIds.forEach(gid => {
+      if (!expenseListeners[gid]) {
+        const expensesQuery = query(
+          collection(db, "groups", gid, "expenses"),
+          orderBy("date", "desc")
+        );
+
+        expenseListeners[gid] = onSnapshot(expensesQuery, (expSnapshot) => {
+          const expenses = [];
+          expSnapshot.forEach(expSnap => {
+            const expData = expSnap.data();
+            expenses.push({
+              desc: expData.desc,
+              amount: expData.amount,
+              payer: expData.payer,
+              splitWith: expData.splitWith || [],
+              date: expData.date ? (expData.date.toDate ? expData.date.toDate().toISOString().split('T')[0] : expData.date) : new Date().toISOString().split('T')[0],
+              category: expData.category || 'other'
+            });
+          });
+
+          if (newGroupsMap[gid]) {
+            newGroupsMap[gid].expenses = expenses;
+          } else {
+            const cachedGroup = GROUPS.find(g => g.id === gid);
+            if (cachedGroup) cachedGroup.expenses = expenses;
+          }
+
+          GROUPS = Object.values(newGroupsMap);
+          updateFirebaseUI();
+        }, (error) => {
+          console.error(`Error loading expenses for group ${gid}:`, error);
+        });
+      } else {
+        const oldGroup = GROUPS.find(g => g.id === gid);
+        if (oldGroup) {
+          newGroupsMap[gid].expenses = oldGroup.expenses || [];
+        }
+      }
+    });
+
+    GROUPS = Object.values(newGroupsMap);
+    updateFirebaseUI();
+  }, (error) => {
+    console.error("Error subscribing to groups:", error);
+  });
+}
+
+function updateFirebaseUI() {
+  calculateAndRenderStats();
+  renderGroupsBadges();
+  renderActivityLog();
+}
+
 // ── Expose to window (for inline onclick handlers in HTML) ────
 
 window.saveProfile  = saveProfile;
@@ -378,8 +517,13 @@ window.handleLogout = handleLogout;
 
 document.addEventListener('DOMContentLoaded', () => {
   applyPreferences();
-  loadProfile();
-  calculateAndRenderStats();
-  renderGroupsBadges();
-  renderActivityLog();
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      initFirebaseSync(user);
+    } else {
+      window.location.href = 'index.html';
+    }
+  });
 });
+

@@ -28,46 +28,8 @@ import {
             balance summary wiring, real-time Firestore sync
    ============================================================ */
 
-// ── In-memory Fallback Store for Guest Mode ───────────────────
-let GUEST_GROUPS = [
-  {
-    id:        'goa',
-    name:      'Goa Trip 2026',
-    members:   ['Arif', 'Nadeem', 'Izhaan'],
-    createdBy: 'arif',
-    createdAt: '2026-06-10T10:00:00.000Z',
-    status:    'settled',
-    expenses: [
-      { desc: "Dinner at Ocean's", amount: 3000, payer: 'Arif',   splitWith: ['Arif','Nadeem','Izhaan'], perPerson: 1000, date: '2026-06-16', category: 'food' },
-      { desc: 'Uber Ride',        amount: 1500, payer: 'Izhaan', splitWith: ['Arif','Nadeem','Izhaan'], perPerson:  500, date: '2026-06-15', category: 'transport' },
-    ],
-  },
-  {
-    id:        'room',
-    name:      'Room Expenses',
-    members:   ['Arif', 'Nadeem'],
-    createdBy: 'arif',
-    createdAt: '2026-06-01T08:00:00.000Z',
-    status:    'pending',
-    expenses: [
-      { desc: 'Room Rent', amount: 4500, payer: 'Nadeem', splitWith: ['Arif','Nadeem'], perPerson: 2250, date: '2026-06-14', category: 'accommodation' },
-    ],
-  },
-  {
-    id:        'office',
-    name:      'Office Lunch',
-    members:   ['Arif', 'Izhaan', 'Nadeem'],
-    createdBy: 'arif',
-    createdAt: '2026-06-12T12:00:00.000Z',
-    status:    'pending',
-    expenses: [
-      { desc: 'Office Pizza', amount: 950, payer: 'Arif', splitWith: ['Arif','Izhaan','Nadeem'], perPerson: 316.67, date: '2026-06-13', category: 'food' },
-    ],
-  },
-];
-
 let GROUPS = [];
-let CURRENT_USER = 'Guest';
+let CURRENT_USER = '';
 let expenseListeners = {};
 let groupsListener = null;
 
@@ -243,43 +205,24 @@ function handleCreateGroup(e) {
     return showGroupError(`A group named "${name}" already exists.`);
   }
 
-  const isGuest = sessionStorage.getItem('isGuest') === 'true';
+  const newGroupData = {
+    name,
+    members,
+    createdBy: auth.currentUser.uid,
+    createdAt: serverTimestamp(),
+    status: 'pending'
+  };
 
-  if (isGuest) {
-    const newGroup = {
-      id:        'group_' + Date.now(),
-      name,
-      members,
-      createdBy: CURRENT_USER,
-      createdAt: new Date().toISOString(),
-      status:    'pending',
-      expenses:  [],
-    };
-    GROUPS.unshift(newGroup);
-    renderDashboard();
-    closeModal();
-    nameInput.value    = '';
-    membersInput.value = '';
-  } else {
-    const newGroupData = {
-      name,
-      members,
-      createdBy: auth.currentUser.uid,
-      createdAt: serverTimestamp(),
-      status: 'pending'
-    };
-
-    addDoc(collection(db, "groups"), newGroupData)
-      .then(() => {
-        closeModal();
-        nameInput.value    = '';
-        membersInput.value = '';
-      })
-      .catch(err => {
-        console.error("Error creating group:", err);
-        showGroupError("Failed to create group. Please try again.");
-      });
-  }
+  addDoc(collection(db, "groups"), newGroupData)
+    .then(() => {
+      closeModal();
+      nameInput.value    = '';
+      membersInput.value = '';
+    })
+    .catch(err => {
+      console.error("Error creating group:", err);
+      showGroupError("Failed to create group. Please try again.");
+    });
 }
 
 function showGroupError(msg) {
@@ -563,26 +506,22 @@ function renderDashboard() {
 
 function handleLogout(e) {
   e.preventDefault();
-  if (sessionStorage.getItem('isGuest') === 'true') {
-    sessionStorage.removeItem('isGuest');
-    window.location.href = 'index.html';
-  } else {
-    // Unsubscribe from listeners
-    if (groupsListener) {
-      groupsListener();
-    }
-    Object.values(expenseListeners).forEach(unsubscribe => unsubscribe());
-    expenseListeners = {};
-
-    signOut(auth)
-      .then(() => {
-        window.location.href = 'index.html';
-      })
-      .catch(err => {
-        console.error("Signout failed:", err);
-        window.location.href = 'index.html';
-      });
+  
+  // Unsubscribe from listeners
+  if (groupsListener) {
+    groupsListener();
   }
+  Object.values(expenseListeners).forEach(unsubscribe => unsubscribe());
+  expenseListeners = {};
+
+  signOut(auth)
+    .then(() => {
+      window.location.href = 'index.html';
+    })
+    .catch(err => {
+      console.error("Signout failed:", err);
+      window.location.href = 'index.html';
+    });
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -594,16 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) {
       initFirebaseSync(user);
     } else {
-      if (sessionStorage.getItem('isGuest') === 'true') {
-        CURRENT_USER = 'Arif';
-        // Use localStorage groups if saved (e.g. after settings danger zone actions),
-        // otherwise fall back to the hardcoded defaults.
-        const savedGroups = localStorage.getItem('splitease_guest_groups');
-        GROUPS = savedGroups ? JSON.parse(savedGroups) : GUEST_GROUPS;
-        renderDashboard();
-      } else {
-        window.location.href = 'index.html';
-      }
+      window.location.href = 'index.html';
     }
   });
 });

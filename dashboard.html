@@ -112,9 +112,9 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="search-input" type="text" id="search-input" placeholder="Search expenses or groups…" oninput="window.handleSearch(this.value)" />
       </div>
-      <div class="user-chip">
-        <div class="user-avatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#22C55E,#F59E0B);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0F1117;">A</div>
-        <span class="user-chip-name">Arif</span>
+      <div class="user-chip" id="user-chip" style="display:none;">
+        <div class="user-avatar" id="user-avatar-circle" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#22C55E,#F59E0B);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0F1117;">?</div>
+        <span class="user-chip-name" id="user-chip-name">...</span>
       </div>
     </div>
 
@@ -130,7 +130,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
         </div>
       </div>
-      <div class="stat-value">₹12,450</div>
+      <div class="stat-value" id="stat-total-expenses">...</div>
       <div class="stat-footer">
         <span class="trend up">▲ 12.5%</span>
         <span class="trend-note">vs last month</span>
@@ -144,7 +144,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         </div>
       </div>
-      <div class="stat-value">₹5,200</div>
+      <div class="stat-value" id="stat-you-paid">...</div>
       <div class="stat-footer">
         <span class="trend up">▲ 8.2%</span>
         <span class="trend-note">vs last month</span>
@@ -158,7 +158,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </div>
       </div>
-      <div class="stat-value">₹1,850</div>
+      <div class="stat-value" id="stat-you-owe">...</div>
       <div class="stat-footer">
         <span class="trend down">▼ 4.1%</span>
         <span class="trend-note">vs last month</span>
@@ -172,7 +172,7 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
       </div>
-      <div class="stat-value" id="groups-count">3</div>
+      <div class="stat-value" id="groups-count">...</div>
       <div class="stat-footer">
         <span class="trend flat">Active</span>
         <span class="trend-note">groups</span>
@@ -195,103 +195,7 @@
       </div>
 
       <div class="groups-grid" id="groups-grid">
-
-        <!-- Group 1 -->
-        <div class="card card-hover group-card fade-up" style="animation-delay:.1s">
-          <div>
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
-              <h3 class="group-card-name">Goa Trip 2026</h3>
-              <span class="badge badge-success">Settled</span>
-            </div>
-            <div class="group-meta">
-              <div class="group-meta-row"><span class="label">Members</span><span class="value">3 (Arif, Nadeem, Izhaan)</span></div>
-              <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹9,000</span></div>
-              <div class="group-meta-row"><span class="label">Last Active</span><span class="value">Today, 2:30 PM</span></div>
-            </div>
-            <!-- Spending progress bar -->
-            <div class="group-progress-wrap" aria-label="Spending progress">
-              <div class="group-progress-labels">
-                <span>Your share</span>
-                <span class="group-progress-pct">100%</span>
-              </div>
-              <div class="group-progress-bar">
-                <div class="group-progress-fill settled" style="width:100%"></div>
-              </div>
-              <small class="group-progress-note">₹3,000 / ₹3,000 — fully settled ✓</small>
-            </div>
-          </div>
-          <div class="group-actions">
-            <button class="btn btn-secondary btn-sm btn-full">View Group</button>
-            <button class="btn btn-primary btn-sm btn-icon" title="Add Expense" onclick="goToAddExpense('Goa Trip 2026')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Group 2 -->
-        <div class="card card-hover group-card fade-up" style="animation-delay:.15s">
-          <div>
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
-              <h3 class="group-card-name">Room Expenses</h3>
-              <span class="badge badge-pending">Pending</span>
-            </div>
-            <div class="group-meta">
-              <div class="group-meta-row"><span class="label">Members</span><span class="value">2 (Arif, Nadeem)</span></div>
-              <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹3,450</span></div>
-              <div class="group-meta-row"><span class="label">Last Active</span><span class="value">Yesterday</span></div>
-            </div>
-            <!-- Spending progress bar -->
-            <div class="group-progress-wrap" aria-label="Spending progress">
-              <div class="group-progress-labels">
-                <span>Your share paid</span>
-                <span class="group-progress-pct">46%</span>
-              </div>
-              <div class="group-progress-bar">
-                <div class="group-progress-fill" style="width:46%"></div>
-              </div>
-              <small class="group-progress-note">₹800 paid of ₹1,725 share</small>
-            </div>
-          </div>
-          <div class="group-actions">
-            <button class="btn btn-secondary btn-sm btn-full">View Group</button>
-            <button class="btn btn-primary btn-sm btn-icon" title="Add Expense" onclick="goToAddExpense('Room Expenses')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Group 3 -->
-        <div class="card card-hover group-card fade-up" style="animation-delay:.2s">
-          <div>
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;">
-              <h3 class="group-card-name">Office Lunch</h3>
-              <span class="badge badge-pending">Pending</span>
-            </div>
-            <div class="group-meta">
-              <div class="group-meta-row"><span class="label">Members</span><span class="value">3 (Arif, Izhaan, Nadeem)</span></div>
-              <div class="group-meta-row"><span class="label">Total Spent</span><span class="value green">₹2,100</span></div>
-              <div class="group-meta-row"><span class="label">Last Active</span><span class="value">3 days ago</span></div>
-            </div>
-            <!-- Spending progress bar -->
-            <div class="group-progress-wrap" aria-label="Spending progress">
-              <div class="group-progress-labels">
-                <span>Your share paid</span>
-                <span class="group-progress-pct">71%</span>
-              </div>
-              <div class="group-progress-bar">
-                <div class="group-progress-fill" style="width:71%"></div>
-              </div>
-              <small class="group-progress-note">₹500 paid of ₹700 share</small>
-            </div>
-          </div>
-          <div class="group-actions">
-            <button class="btn btn-secondary btn-sm btn-full">View Group</button>
-            <button class="btn btn-primary btn-sm btn-icon" title="Add Expense" onclick="goToAddExpense('Office Lunch')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          </div>
-        </div>
-
+        <!-- JS will populate -->
       </div>
     </section>
 
@@ -302,49 +206,17 @@
       <div class="card balance-card fade-up" style="animation-delay:.15s">
         <h2>Balance Summary</h2>
 
-        <div class="balance-list">
-          <div class="balance-row">
-            <div class="balance-who">
-              <div class="avatar-sm orange">N</div>
-              <div class="balance-info">
-                <p>You owe <strong>Nadeem</strong></p>
-                <small>Room Rent, Dinner</small>
-              </div>
-            </div>
-            <div class="balance-row-right">
-              <span class="balance-amount text-red">₹1,850</span>
-              <button class="settle-btn" id="settle-nadeem" title="Settle up with Nadeem" onclick="this.classList.toggle('settling')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                Settle Up
-              </button>
-            </div>
-          </div>
-          <div class="balance-row">
-            <div class="balance-who">
-              <div class="avatar-sm green">I</div>
-              <div class="balance-info">
-                <p><strong>Izhaan</strong> owes you</p>
-                <small>Cab, Snacks</small>
-              </div>
-            </div>
-            <div class="balance-row-right">
-              <span class="balance-amount text-green">₹1,200</span>
-              <button class="settle-btn settle-btn-receive" id="settle-izhaan" title="Mark received from Izhaan" onclick="this.classList.toggle('settling')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Received
-              </button>
-            </div>
-          </div>
+        <div class="balance-list" id="balance-list">
+          <!-- JS will populate -->
         </div>
 
-        <div class="settle-tip">
+        <div class="settle-tip" id="settle-tip" style="display:none;">
           <div class="settle-tip-title">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             Smart Suggestion
           </div>
-          <p class="settle-tip-body">
-            Izhaan owes you ₹1,200. You owe Nadeem ₹1,850.
-            Simplify: <strong>Izhaan pays Nadeem ₹1,200</strong> and you pay Nadeem <strong>₹650</strong>.
+          <p class="settle-tip-body" id="settle-tip-body">
+            <!-- JS will populate -->
           </p>
         </div>
       </div>
@@ -357,63 +229,7 @@
         </div>
 
         <div class="expense-list" id="expense-list">
-
-          <div class="expense-row" data-category="food">
-            <div class="expense-left">
-              <div class="expense-emoji">🍔</div>
-              <div>
-                <div class="expense-name">Dinner at Ocean's</div>
-                <div class="expense-sub">Paid by <strong>Arif</strong> · Goa Trip</div>
-              </div>
-            </div>
-            <div class="expense-right">
-              <div class="expense-amount">₹3,000</div>
-              <div class="expense-date">Today, 2:30 PM</div>
-            </div>
-          </div>
-
-          <div class="expense-row" data-category="transport">
-            <div class="expense-left">
-              <div class="expense-emoji">🚗</div>
-              <div>
-                <div class="expense-name">Uber Ride</div>
-                <div class="expense-sub">Paid by <strong>Izhaan</strong> · Goa Trip</div>
-              </div>
-            </div>
-            <div class="expense-right">
-              <div class="expense-amount">₹1,500</div>
-              <div class="expense-date">Yesterday, 9:15 PM</div>
-            </div>
-          </div>
-
-          <div class="expense-row" data-category="accommodation">
-            <div class="expense-left">
-              <div class="expense-emoji">🏢</div>
-              <div>
-                <div class="expense-name">Room Rent</div>
-                <div class="expense-sub">Paid by <strong>Nadeem</strong> · Room Expenses</div>
-              </div>
-            </div>
-            <div class="expense-right">
-              <div class="expense-amount">₹4,500</div>
-              <div class="expense-date">14 Jun, 11:00 AM</div>
-            </div>
-          </div>
-
-          <div class="expense-row" data-category="food">
-            <div class="expense-left">
-              <div class="expense-emoji">🍕</div>
-              <div>
-                <div class="expense-name">Office Pizza</div>
-                <div class="expense-sub">Paid by <strong>Arif</strong> · Office Lunch</div>
-              </div>
-            </div>
-            <div class="expense-right">
-              <div class="expense-amount">₹950</div>
-              <div class="expense-date">13 Jun, 1:00 PM</div>
-            </div>
-          </div>
-
+          <!-- JS will populate -->
         </div>
       </div>
 
@@ -439,7 +255,7 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="new-group-members">Members (comma separated)</label>
-        <input class="form-input" type="text" id="new-group-members" placeholder="e.g. Arif, Nadeem, Izhaan" required />
+        <input class="form-input" type="text" id="new-group-members" placeholder="e.g. Arif, Nadeem" required />
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeModal()">Cancel</button>
