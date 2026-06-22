@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SplitEase Profile — view and edit your personal information." />
+  <title>Profile — SplitEase</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js"
+      }
+    }
+  </script>
+  <style>
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
+
+    /* Avatar section */
+    .avatar-wrap { position: relative; display: inline-block; margin-bottom: 24px; }
+    .avatar-circle {
+      width: 100px; height: 100px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-green), var(--success-green));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px; font-weight: 700; color: var(--bg-primary);
+      margin: 0 auto;
+      box-shadow: 0 0 0 4px var(--bg-card), 0 0 0 6px var(--primary-green);
+    }
+    .avatar-edit-btn {
+      position: absolute; bottom: 0; right: 0;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--primary-green); color: var(--bg-primary);
+      border: 2px solid var(--bg-card);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 15px;
+      transition: transform var(--transition);
+    }
+    .avatar-edit-btn:hover { transform: scale(1.1); }
+    .profile-name  { font-size: 20px; font-weight: 700; margin-bottom: 4px; color: var(--white); }
+    .profile-email { font-size: 14px; color: var(--muted-gray); margin-bottom: 20px; }
+
+    /* Stats row in avatar card */
+    .profile-stats { 
+      display: flex; 
+      gap: 0; 
+      border-top: 1px solid var(--border); 
+      margin: 24px -20px -20px -20px; 
+    }
+    .profile-stat {
+      flex: 1; padding: 16px 8px; text-align: center;
+      border-right: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+    }
+    .profile-stat:last-child { border-right: none; }
+    .ps-value { font-size: 18px; font-weight: 700; color: var(--white); }
+    .ps-label { font-size: 12px; color: var(--muted-gray); margin-top: 4px; }
+
+    /* Form section overrides */
+    .profile-card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px; font-weight: 700; color: var(--white);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .profile-form { padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 600px) { .profile-form { grid-template-columns: 1fr; } }
+    .form-group.full { grid-column: 1/-1; }
+
+    /* Activity row */
+    .activity-row {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      transition: background var(--transition);
+    }
+    .activity-row:hover { background: rgba(255,255,255,0.02); }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(34,197,94,0.1); color: var(--primary-green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .activity-text { flex: 1; font-size: 14px; color: var(--light-gray); line-height: 1.5; }
+    .activity-text strong { color: var(--white); font-weight: 600; }
+    .activity-time { font-size: 12px; color: var(--muted-gray); }
+
+    /* ── Toast notification ── */
+    .p-toast {
+      position: fixed; bottom: 32px; right: 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary-green);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      font-size: 14px; font-weight: 500; color: var(--white);
+      box-shadow: var(--shadow-lg);
+      display: flex; align-items: center; gap: 12px;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 9999; min-width: 240px;
+    }
+    .p-toast.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+<script>
+  /* Apply persisted preferences immediately (before first paint) */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+      if (s['s-compact'])              document.body.classList.add('compact-mode');
+      if (s['s-animations'] === false) document.body.classList.add('no-animations');
+    } catch (e) {}
+  })();
+</script>
+
+<div class="p-toast" id="p-toast">
+  <span id="p-toast-icon">✅</span>
+  <span id="p-toast-msg">Profile saved!</span>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="window.closeSidebar && window.closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 2L3 9.5V22.5L16 30L29 22.5V9.5L16 2Z" stroke="url(#sb-lg-p)" stroke-width="2.5" stroke-linejoin="round"/>
+      <line x1="16" y1="8" x2="16" y2="24" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/>
+      <polyline points="10,13 16,16 22,13" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="10,19 16,22 22,19" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="sb-lg-p" x1="3" y1="2" x2="29" y2="30" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#22C55E"/><stop offset="1" stop-color="#F59E0B"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <span class="brand-name">Split<span>Ease</span></span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="dashboard.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="add-expense.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Expense
+    </a>
+
+    <a class="nav-item" href="settings.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a class="nav-item active" href="profile.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Profile
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="nav-item" href="#" onclick="window.handleLogout && window.handleLogout(event)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Logout
+    </a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <header class="topbar">
+    <button class="hamburger" onclick="window.openSidebar && window.openSidebar()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div>
+      <h1 class="page-title">Profile</h1>
+      <p class="page-sub">Manage your personal information</p>
+    </div>
+  </header>
+
+  <div class="profile-layout">
+
+    <!-- Left: Avatar card -->
+    <div>
+      <div class="card" style="text-align: center; padding: 32px 20px 20px 20px; margin-bottom: 24px;">
+        <div class="avatar-wrap">
+          <div class="avatar-circle" id="avatar-initials">?</div>
+        </div>
+        <div class="profile-name" id="profile-display-name">...</div>
+        <div class="profile-email" id="profile-display-email">...</div>
+        <div class="badge badge-success" style="margin-bottom: 24px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Verified Account
+        </div>
+
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="ps-value" id="ps-groups">—</div>
+            <div class="ps-label">Groups</div>
+          </div>
+          <div class="profile-stat">
+            <div class="ps-value" id="ps-expenses">—</div>
+            <div class="ps-label">Expenses</div>
+          </div>
+          <div class="profile-stat">
+            <div class="ps-value" id="ps-total">—</div>
+            <div class="ps-label">Total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Groups joined -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="profile-card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Groups Joined
+        </div>
+        <div id="groups-badges-container" style="padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 10px;">
+          <!-- Rendered dynamically by profile.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Edit form + activity -->
+    <div>
+
+      <!-- Edit info -->
+      <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 24px;">
+        <div class="profile-card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Personal Information
+        </div>
+        <div class="profile-form">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" type="text" id="inp-fname" value="" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" type="text" id="inp-lname" value="" />
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="inp-email" value="" disabled style="opacity:0.6; cursor:not-allowed;"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input class="form-input" type="tel" id="inp-phone" placeholder="+91 00000 00000" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">UPI ID</label>
+            <input class="form-input" type="text" id="inp-upi" placeholder="example@upi" />
+          </div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label class="form-label">Bio</label>
+            <input class="form-input" type="text" id="inp-bio" placeholder="e.g. Always splitting bills 🍕" />
+          </div>
+        </div>
+        <div style="padding: 20px 24px; border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; justify-content: flex-end;">
+          <button class="btn btn-primary" id="save-profile-btn" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="profile-card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Recent Activity
+        </div>
+        <!-- Rendered dynamically by profile.js -->
+        <div id="activity-list">
+          <div style="padding:24px;text-align:center;color:var(--muted-gray);font-size:13px;">Loading activity…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/profile.js"></script>
+
+</body>
+</html>
