@@ -7,6 +7,7 @@
   <title>Dashboard — SplitEase</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/join.css" />
   <script type="importmap">
     {
       "imports": {
@@ -112,6 +113,24 @@
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="search-input" type="text" id="search-input" placeholder="Search expenses or groups…" oninput="window.handleSearch(this.value)" />
       </div>
+      <!-- Notification Bell -->
+      <div style="position:relative; z-index:100;" id="notif-wrap">
+        <button class="notif-btn" id="notif-btn" title="Join Requests" onclick="window.toggleRequestsPanel()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notif-badge" style="display:none;">0</span>
+        </button>
+        <!-- Requests panel -->
+        <div class="requests-panel" id="requests-panel" style="display:none;">
+          <div class="requests-panel-head">
+            <span>Join Requests</span>
+            <button style="background:none;border:none;color:var(--muted-gray);cursor:pointer;font-size:18px;line-height:1;" onclick="window.toggleRequestsPanel()">×</button>
+          </div>
+          <div class="requests-panel-body" id="requests-panel-body">
+            <div class="requests-empty">No pending requests</div>
+          </div>
+        </div>
+      </div>
+
       <div class="user-chip" id="user-chip" style="display:none;">
         <div class="user-avatar" id="user-avatar-circle" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#22C55E,#F59E0B);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0F1117;">?</div>
         <span class="user-chip-name" id="user-chip-name">...</span>
@@ -131,10 +150,6 @@
         </div>
       </div>
       <div class="stat-value" id="stat-total-expenses">...</div>
-      <div class="stat-footer">
-        <span class="trend up">▲ 12.5%</span>
-        <span class="trend-note">vs last month</span>
-      </div>
     </div>
 
     <div class="card stat-card fade-up" style="animation-delay:.1s">
@@ -145,10 +160,6 @@
         </div>
       </div>
       <div class="stat-value" id="stat-you-paid">...</div>
-      <div class="stat-footer">
-        <span class="trend up">▲ 8.2%</span>
-        <span class="trend-note">vs last month</span>
-      </div>
     </div>
 
     <div class="card stat-card fade-up" style="animation-delay:.15s">
@@ -159,10 +170,6 @@
         </div>
       </div>
       <div class="stat-value" id="stat-you-owe">...</div>
-      <div class="stat-footer">
-        <span class="trend down">▼ 4.1%</span>
-        <span class="trend-note">vs last month</span>
-      </div>
     </div>
 
     <div class="card stat-card fade-up" style="animation-delay:.2s">
@@ -173,10 +180,6 @@
         </div>
       </div>
       <div class="stat-value" id="groups-count">...</div>
-      <div class="stat-footer">
-        <span class="trend flat">Active</span>
-        <span class="trend-note">groups</span>
-      </div>
     </div>
 
   </section>
@@ -250,19 +253,57 @@
     <form onsubmit="window.handleCreateGroup(event)" novalidate>
       <input type="hidden" id="edit-group-id" value="" />
       <div id="group-modal-error" style="display:none;color:var(--red);font-size:13px;margin-bottom:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;padding:10px 14px;"></div>
-      <div class="form-group">
-        <label class="form-label" for="new-group-name">Group Name</label>
-        <input class="form-input" type="text" id="new-group-name" placeholder="e.g. Goa Trip, Room Rent" required />
+
+      <!-- Step 1: Form fields -->
+      <div id="group-form-fields">
+        <div class="form-group">
+          <label class="form-label" for="new-group-name">Group Name</label>
+          <input class="form-input" type="text" id="new-group-name" placeholder="e.g. Goa Trip, Room Rent" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="new-group-members">Members <span style="color:var(--muted-gray);font-weight:400;">(comma separated, optional — invite via link instead)</span></label>
+          <input class="form-input" type="text" id="new-group-members" placeholder="e.g. Arif, Nadeem (or leave empty)" />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="group-modal-submit">Create Group</button>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="new-group-members">Members (comma separated)</label>
-        <input class="form-input" type="text" id="new-group-members" placeholder="e.g. Arif, Nadeem" required />
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary btn-sm" id="group-modal-submit">Create Group</button>
+
+      <!-- Step 2: Invite link (shown after creation) -->
+      <div id="group-invite-section" style="display:none;">
+        <div style="text-align:center;padding:8px 0 16px;">
+          <div style="font-size:32px;margin-bottom:10px;">🎉</div>
+          <p style="font-weight:700;font-size:15px;color:var(--white);" id="group-created-name"></p>
+          <p style="font-size:13px;color:var(--muted-gray);margin-top:4px;">Group created! Share this invite link so others can request to join.</p>
+        </div>
+        <div class="invite-link-box">
+          <input class="invite-link-input" id="modal-invite-link" type="text" readonly />
+          <button type="button" class="invite-copy-btn" id="modal-copy-btn" onclick="window.copyModalInviteLink()">Copy</button>
+        </div>
+        <div class="modal-actions" style="margin-top:18px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeModal()">Done</button>
+        </div>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     INVITE LINK MODAL
+════════════════════════════════════════ -->
+<div class="invite-modal-overlay" id="invite-modal">
+  <div class="invite-modal-box fade-up">
+    <div class="invite-modal-header">
+      <h3>🔗 Invite to Group</h3>
+      <button style="background:none;border:none;color:var(--muted-gray);font-size:22px;cursor:pointer;" onclick="window.closeInviteModal()">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted-gray);margin-bottom:4px;">Share this link. Anyone who opens it can request to join <strong id="invite-modal-group-name" style="color:var(--white);"></strong>.</p>
+    <p class="invite-expiry" id="invite-modal-expiry"></p>
+    <div class="invite-link-box">
+      <input class="invite-link-input" id="invite-link-value" type="text" readonly />
+      <button class="invite-copy-btn" id="invite-copy-btn" onclick="window.copyInviteLink()">Copy</button>
+    </div>
   </div>
 </div>
 

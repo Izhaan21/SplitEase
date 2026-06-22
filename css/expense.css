@@ -263,3 +263,10 @@
   .form-row-2 { grid-template-columns: 1fr; }
   .submit-row { flex-direction: column; }
 }
+
+/* ── Field validation error highlight ── */
+.field-error,
+.field-error:focus {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+}

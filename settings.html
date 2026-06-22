@@ -296,9 +296,7 @@
       <div class="settings-nav-item active" id="nav-general"       onclick="showTab('general')">
         <span class="nav-icon">⚙️</span> General
       </div>
-      <div class="settings-nav-item" id="nav-notifications"        onclick="showTab('notifications')">
-        <span class="nav-icon">🔔</span> Notifications
-      </div>
+
       <div class="settings-nav-item" id="nav-privacy"              onclick="showTab('privacy')">
         <span class="nav-icon">🔒</span> Privacy & Security
       </div>
@@ -319,33 +317,7 @@
             Regional Preferences
           </div>
 
-          <div class="s-row">
-            <div>
-              <div class="s-row-label">Currency</div>
-              <div class="s-row-sub">All expense amounts are displayed in this currency</div>
-            </div>
-            <div class="s-row-control">
-              <select class="form-select" id="s-currency" style="width: auto;">
-                <option value="INR">₹ INR</option>
-                <option value="USDT">$ USDT</option>
-                <option value="EUR">€ EURO</option>
-              </select>
-            </div>
-          </div>
 
-          <div class="s-row">
-            <div>
-              <div class="s-row-label">Language</div>
-              <div class="s-row-sub">App interface display language</div>
-            </div>
-            <div class="s-row-control">
-              <select class="form-select" id="s-language" style="width: auto;">
-                <option value="en">🇬🇧 English</option>
-                <option value="hi">🇮🇳 Hindi</option>
-                <option value="mr">🇮🇳 Marathi</option>
-              </select>
-            </div>
-          </div>
 
           <div class="s-row">
             <div>
@@ -409,17 +381,6 @@
             </div>
           </div>
         </div>
-
-        <div class="card settings-card" style="margin-bottom: 0;">
-          <div class="save-bar" style="border-top: none; border-radius: var(--radius-lg);">
-            <button class="btn btn-ghost" onclick="resetGeneral()">Reset to Default</button>
-            <button class="btn btn-primary" id="btn-save-general" onclick="saveGeneral()">Save Changes</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ══ NOTIFICATIONS ══ -->
-      <div class="settings-panel" id="tab-notifications">
 
         <div class="card settings-card">
           <div class="s-card-header">
@@ -528,7 +489,8 @@
 
         <div class="card settings-card" style="margin-bottom: 0;">
           <div class="save-bar" style="border-top: none; border-radius: var(--radius-lg);">
-            <button class="btn btn-primary" id="btn-save-notif" onclick="saveNotifications()">Save Changes</button>
+            <button class="btn btn-ghost" onclick="resetGeneral()">Reset to Default</button>
+            <button class="btn btn-primary" id="btn-save-general" onclick="saveGeneral()">Save Changes</button>
           </div>
         </div>
       </div>

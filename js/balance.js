@@ -94,7 +94,12 @@ function round2(n) {
 function computeNetBalances(expenses, members) {
   // Initialise everyone to 0
   const balances = {};
-  members.forEach(m => { balances[m] = 0; });
+  // Build a lowercase → canonical-name map for case-insensitive lookups
+  const memberMap = {};
+  members.forEach(m => {
+    balances[m] = 0;
+    memberMap[m.toLowerCase()] = m;
+  });
 
   expenses.forEach(exp => {
     const { payer, amount, splitWith } = exp;
@@ -105,15 +110,17 @@ function computeNetBalances(expenses, members) {
 
     const share = round2(amount / splitWith.length);
 
-    // Credit the payer the full amount they fronted
-    if (balances[payer] !== undefined) {
-      balances[payer] = round2(balances[payer] + amount);
+    // Credit the payer — match case-insensitively
+    const canonicalPayer = memberMap[payer.toLowerCase()];
+    if (canonicalPayer !== undefined) {
+      balances[canonicalPayer] = round2(balances[canonicalPayer] + amount);
     }
 
-    // Debit each person in the split their share
+    // Debit each person in the split — match case-insensitively
     splitWith.forEach(member => {
-      if (balances[member] !== undefined) {
-        balances[member] = round2(balances[member] - share);
+      const canonicalMember = memberMap[member.toLowerCase()];
+      if (canonicalMember !== undefined) {
+        balances[canonicalMember] = round2(balances[canonicalMember] - share);
       }
     });
   });
@@ -191,8 +198,9 @@ function simplifyDebts(balances) {
  * @returns {{ owes: Transaction[], owed: Transaction[] }}
  */
 function getUserSummary(transactions, currentUser) {
-  const owes = transactions.filter(t => t.from === currentUser);
-  const owed = transactions.filter(t => t.to   === currentUser);
+  const cu = currentUser.toLowerCase();
+  const owes = transactions.filter(t => t.from && t.from.toLowerCase() === cu);
+  const owed = transactions.filter(t => t.to   && t.to.toLowerCase()   === cu);
   return { owes, owed };
 }
 
@@ -204,9 +212,10 @@ function getUserSummary(transactions, currentUser) {
  * @returns {number}
  */
 function totalOwedBy(transactions, member) {
+  const m = member.toLowerCase();
   return round2(
     transactions
-      .filter(t => t.from === member)
+      .filter(t => t.from && t.from.toLowerCase() === m)
       .reduce((sum, t) => sum + t.amount, 0)
   );
 }
@@ -219,9 +228,10 @@ function totalOwedBy(transactions, member) {
  * @returns {number}
  */
 function totalOwedTo(transactions, member) {
+  const m = member.toLowerCase();
   return round2(
     transactions
-      .filter(t => t.to === member)
+      .filter(t => t.to && t.to.toLowerCase() === m)
       .reduce((sum, t) => sum + t.amount, 0)
   );
 }
@@ -242,9 +252,10 @@ function totalExpenses(expenses) {
  * @returns {number} Total amount paid by this member
  */
 function totalPaidBy(expenses, member) {
+  const m = member.toLowerCase();
   return round2(
     expenses
-      .filter(e => e.payer === member && !e.isSettlement)
+      .filter(e => e.payer && e.payer.toLowerCase() === m && !e.isSettlement)
       .reduce((sum, e) => sum + e.amount, 0)
   );
 }
@@ -321,7 +332,7 @@ function buildBalanceRow(type, t, color) {
          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
          Settle Up
        </button>`
-    : `<button class="settle-btn settle-btn-receive" title="Mark received from ${safeName}" onclick="this.classList.toggle('settling'); setTimeout(() => window.handleSettle('${t.groupId}', '${t.to}', '${t.from}', ${t.amount}), 500)">
+    : `<button class="settle-btn settle-btn-receive" title="Mark received from ${safeName}" onclick="this.classList.toggle('settling'); setTimeout(() => window.handleSettle('${t.groupId}', '${t.from}', '${t.to}', ${t.amount}), 500)">
          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
          Received
        </button>`;

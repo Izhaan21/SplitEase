@@ -25,6 +25,11 @@ let GROUP_MEMBERS = {};
 let GROUPS_CACHE = []; // Stores the loaded groups for easy lookup
 let CURRENT_USER = '';
 
+// Normalize any name to Title Case: "john doe" → "John Doe"
+function toTitleCase(str) {
+  return String(str).trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 // ── Step Indicator Tracker ────────────────────────────────────
 const stepState = { 1: false, 2: false, 3: false, 4: false };
 
@@ -151,6 +156,7 @@ function updateSplitPreview() {
 // ── Form Validation ───────────────────────────────────────────
 
 function validateExpenseForm() {
+  clearFieldErrors();
   const group = document.getElementById('expense-group').value;
   const name = document.getElementById('expense-name').value.trim();
   const amountRaw = document.getElementById('expense-amount').value;
@@ -161,15 +167,15 @@ function validateExpenseForm() {
   const notes = document.getElementById('expense-notes').value.trim();
   const category = document.getElementById('expense-category').value;
 
-  if (!group) return fail('Please select a group.');
-  if (!name) return fail('Please enter an expense name.');
-  if (name.length < 2) return fail('Expense name must be at least 2 characters.');
-  if (!amountRaw) return fail('Please enter the total amount.');
-  if (isNaN(amount) || amount <= 0) return fail('Please enter a valid amount greater than 0.');
-  if (amount > 1_000_000) return fail('Amount seems too large. Please double-check.');
-  if (!payer) return fail('Please select who paid.');
-  if (!date) return fail('Please select a date.');
-  if (members.length === 0) return fail('Please select at least one member to split with.');
+  if (!group)                               return fail('Please select a group.', 'expense-group');
+  if (!name)                                return fail('Please enter an expense name.', 'expense-name');
+  if (name.length < 2)                      return fail('Expense name must be at least 2 characters.', 'expense-name');
+  if (!amountRaw)                           return fail('Please enter the total amount.', 'expense-amount');
+  if (isNaN(amount) || amount <= 0)         return fail('Please enter a valid amount greater than 0.', 'expense-amount');
+  if (amount > 1_000_000)                   return fail('Amount seems too large. Please double-check.', 'expense-amount');
+  if (!payer)                               return fail('Please select who paid.', 'expense-payer');
+  if (!date)                                return fail('Please select a date.', 'expense-date');
+  if (members.length === 0)                 return fail('Please select at least one member to split with.');
 
   return {
     group,
@@ -184,9 +190,17 @@ function validateExpenseForm() {
   };
 }
 
-function fail(msg) {
+function fail(msg, fieldId) {
+  if (fieldId) {
+    const el = document.getElementById(fieldId);
+    if (el) el.classList.add('field-error');
+  }
   showFormError(msg);
   return null;
+}
+
+function clearFieldErrors() {
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
 }
 
 // ── Error Display ─────────────────────────────────────────────
@@ -207,6 +221,7 @@ function showFormError(msg) {
 function clearFormError() {
   const box = document.getElementById('expense-form-error');
   if (box) { box.textContent = ''; box.classList.remove('show'); }
+  clearFieldErrors();
 }
 
 // ── Form Submit ───────────────────────────────────────────────
@@ -227,8 +242,8 @@ function handleSubmit(e) {
   addDoc(collection(groupRef, "expenses"), {
     desc: expense.desc,
     amount: expense.amount,
-    payer: expense.payer,
-    splitWith: expense.splitWith,
+    payer: toTitleCase(expense.payer),
+    splitWith: expense.splitWith.map(m => toTitleCase(m)),
     perPerson: expense.perPerson,
     category: expense.category,
     notes: expense.notes,
@@ -281,7 +296,7 @@ function populateGroupsDropdown() {
 }
 
 function initFirebaseSync(user) {
-  CURRENT_USER = user.displayName || user.email.split('@')[0];
+  CURRENT_USER = toTitleCase(user.displayName || user.email.split('@')[0]);
 
   // Fetch groups where user is a member
   const groupsQuery = query(

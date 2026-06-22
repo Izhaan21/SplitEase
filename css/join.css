@@ -1,0 +1,256 @@
+/* ============================================================
+   JOIN PAGE — SplitEase
+   ============================================================ */
+
+.join-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 70% 10%, rgba(34,197,94,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 90%, rgba(245,158,11,0.07) 0%, transparent 50%),
+    var(--bg-primary);
+}
+
+.join-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 36px;
+  text-align: center;
+}
+
+.join-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 36px;
+}
+
+.join-state { display: flex; flex-direction: column; align-items: center; }
+
+/* Spinner */
+.join-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary-green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.join-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+@keyframes popIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.join-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.join-sub {
+  font-size: 14px;
+  color: var(--muted-gray);
+  margin-bottom: 20px;
+}
+.join-sub strong { color: var(--white); }
+
+.join-group-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary-green);
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 12px;
+  padding: 14px 24px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.join-meta {
+  font-size: 12px;
+  color: var(--muted-gray);
+  margin-bottom: 24px;
+}
+
+.join-hint {
+  font-size: 13px;
+  color: var(--muted-gray);
+  margin-bottom: 16px;
+}
+
+.join-badge {
+  padding: 10px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+/* Notification bell badge */
+.notif-btn {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+  color: var(--muted-gray);
+}
+.notif-btn:hover { border-color: var(--primary-green); color: var(--white); }
+.notif-btn.has-notif { color: var(--orange); border-color: rgba(245,158,11,0.4); }
+
+.notif-badge {
+  position: absolute;
+  top: -6px; right: -6px;
+  min-width: 18px; height: 18px;
+  background: var(--orange);
+  color: var(--bg-primary);
+  border-radius: 99px;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px;
+  animation: pulse 1.8s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+
+/* Requests panel (dropdown) */
+.requests-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  overflow: hidden;
+  animation: fadeIn 0.2s ease forwards;
+}
+.requests-panel-head {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.requests-panel-body { max-height: 360px; overflow-y: auto; }
+
+.request-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.request-row:last-child { border-bottom: none; }
+.request-row:hover { background: var(--bg-secondary); }
+
+.request-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, #22C55E, #F59E0B);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; color: var(--bg-primary);
+  flex-shrink: 0;
+}
+.request-info { flex: 1; min-width: 0; }
+.request-name { font-size: 14px; font-weight: 600; color: var(--white); }
+.request-detail { font-size: 12px; color: var(--muted-gray); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.request-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.req-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; font-size: 14px;
+  transition: background var(--transition), transform 0.15s;
+}
+.req-btn:active { transform: scale(0.93); }
+.req-btn-accept { background: rgba(34,197,94,0.15); color: var(--primary-green); }
+.req-btn-accept:hover { background: var(--primary-green); color: var(--bg-primary); }
+.req-btn-reject { background: rgba(239,68,68,0.12); color: var(--red); }
+.req-btn-reject:hover { background: var(--red); color: var(--white); }
+
+.requests-empty {
+  padding: 28px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted-gray);
+}
+
+/* Invite link modal */
+.invite-link-box {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.invite-link-input {
+  flex: 1;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--light-gray);
+  font-size: 12px;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.invite-copy-btn {
+  background: var(--primary-green);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter var(--transition);
+}
+.invite-copy-btn:hover { filter: brightness(1.1); }
+.invite-copy-btn.copied { background: var(--bg-hover); color: var(--primary-green); }
+
+/* Invite modal overlay */
+.invite-modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(6px);
+  z-index: 600;
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.invite-modal-overlay.open { display: flex; animation: fadeIn 0.2s ease forwards; }
+.invite-modal-box {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+.invite-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.invite-modal-header h3 { font-size: 18px; font-weight: 700; }
+.invite-expiry {
+  font-size: 12px;
+  color: var(--muted-gray);
+  margin-bottom: 4px;
+}
