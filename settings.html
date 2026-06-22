@@ -177,6 +177,16 @@
   </style>
 </head>
 <body>
+<script>
+  /* Apply persisted preferences immediately (before first paint) */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+      if (s['s-compact'])              document.body.classList.add('compact-mode');
+      if (s['s-animations'] === false) document.body.classList.add('no-animations');
+    } catch (e) {}
+  })();
+</script>
 
 <!-- Toast -->
 <div class="s-toast" id="s-toast">
@@ -673,167 +683,8 @@
   </div><!-- /settings-layout -->
 </main>
 
-<script>
-  // ── Tab switching ──
-  function showTab(name) {
-    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById('tab-' + name).classList.add('active');
-    document.getElementById('nav-' + name).classList.add('active');
-  }
+<script type="module" src="js/settings.js"></script>
 
-  // ── Toast ──
-  function showToast(icon, msg, isError = false) {
-    const t = document.getElementById('s-toast');
-    document.getElementById('s-toast-icon').textContent = icon;
-    document.getElementById('s-toast-msg').textContent = msg;
-    t.classList.toggle('error', isError);
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3500);
-  }
-
-  // ── Modal ──
-  function openModal(id) { document.getElementById(id).classList.add('open'); }
-  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-  window.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); });
-  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
-
-  // ── Load settings from localStorage ──
-  function loadSettings() {
-    const s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
-    if (s.language)   document.getElementById('s-language').value   = s.language;
-    if (s.dateformat) document.getElementById('s-dateformat').value = s.dateformat;
-    if (s.theme)      document.getElementById('s-theme').value      = s.theme;
-    const bools = ['s-compact','s-animations','n-new-expense','n-settlement','n-invite','n-payment','e-weekly','e-monthly','e-updates','p-balance','p-photo','p-activity','p-2fa'];
-    bools.forEach(id => {
-      const el = document.getElementById(id);
-      if (el && s[id] !== undefined) el.checked = s[id];
-    });
-    updateTFABadge();
-  }
-
-  // ── Save to localStorage ──
-  function saveSettings() {
-    const s = {
-      language:    document.getElementById('s-language').value,
-      dateformat:  document.getElementById('s-dateformat').value,
-      theme:       document.getElementById('s-theme').value,
-      'p-2fa':     document.getElementById('p-2fa').checked,
-    };
-    ['s-compact','s-animations','n-new-expense','n-settlement','n-invite','n-payment','e-weekly','e-monthly','e-updates','p-balance','p-photo','p-activity','p-2fa'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) s[id] = el.checked;
-    });
-    localStorage.setItem('splitease_settings', JSON.stringify(s));
-  }
-
-  function saveGeneral() {
-    saveSettings();
-    const btn = document.getElementById('btn-save-general');
-    btn.textContent = 'Saved ✓'; 
-    showToast('✅', 'General settings saved!');
-    setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000);
-  }
-
-  function saveNotifications() {
-    saveSettings();
-    const btn = document.getElementById('btn-save-notif');
-    btn.textContent = 'Saved ✓';
-    showToast('🔔', 'Notification preferences saved!');
-    setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000);
-  }
-
-  function savePrivacy() {
-    saveSettings();
-    const btn = document.getElementById('btn-save-privacy');
-    btn.textContent = 'Saved ✓';
-    showToast('🔒', 'Privacy & security settings saved!');
-    setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000);
-  }
-
-  function resetGeneral() {
-    ['s-compact'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
-    document.getElementById('s-animations').checked = true;
-    document.getElementById('s-language').value = 'en';
-    document.getElementById('s-dateformat').value = 'dmy';
-    document.getElementById('s-theme').value = 'dark';
-    saveSettings();
-    showToast('🔄', 'Settings reset to default.');
-  }
-
-  // ── Change password ──
-  function changePassword() {
-    const cur  = document.getElementById('pw-current').value;
-    const nw   = document.getElementById('pw-new').value;
-    const conf = document.getElementById('pw-confirm').value;
-    if (!cur) { showToast('❌', 'Enter your current password.', true); return; }
-    if (nw.length < 6) { showToast('❌', 'New password must be 6+ characters.', true); return; }
-    if (nw !== conf)   { showToast('❌', 'Passwords do not match.', true); return; }
-    closeModal('modal-password');
-    ['pw-current','pw-new','pw-confirm'].forEach(id => document.getElementById(id).value = '');
-    showToast('🔑', 'Password updated successfully!');
-  }
-
-  // ── 2FA toggle ──
-  function toggle2FA() {
-    saveSettings();
-    updateTFABadge();
-    const on = document.getElementById('p-2fa').checked;
-    showToast(on ? '🔐' : '🔓', on ? 'Two-factor authentication enabled.' : '2FA has been disabled.');
-  }
-  function updateTFABadge() {
-    const on = document.getElementById('p-2fa').checked;
-    const badge = document.getElementById('tfa-badge');
-    badge.textContent = on ? 'ON' : 'OFF';
-    badge.className = 'badge ' + (on ? 'badge-success' : 'badge-danger');
-  }
-
-  // ── Danger zone ──
-  let dangerAction = null;
-  function confirmDanger(action, icon, title, sub) {
-    dangerAction = action;
-    document.getElementById('danger-icon').textContent = icon;
-    document.getElementById('danger-title').textContent = title;
-    document.getElementById('danger-sub').textContent = sub;
-    document.getElementById('danger-confirm-input').value = '';
-    openModal('modal-danger');
-  }
-  function executeDanger() {
-    const val = document.getElementById('danger-confirm-input').value.trim().toUpperCase();
-    if (val !== 'CONFIRM') {
-      showToast('❌', 'Type CONFIRM (in caps) to proceed.', true);
-      return;
-    }
-    closeModal('modal-danger');
-    const msgs = {
-      clear:  ['🗑️', 'Expense history cleared.'],
-      leave:  ['👋', 'You have left all groups.'],
-      delete: ['💀', 'Account deletion requested.'],
-    };
-    const [icon, msg] = msgs[dangerAction] || ['✅', 'Done.'];
-    showToast(icon, msg);
-    dangerAction = null;
-  }
-
-  // ── Export data ──
-  function exportData() {
-    const data = {
-      exported: new Date().toISOString(),
-      settings: JSON.parse(localStorage.getItem('splitease_settings') || '{}'),
-      groups: ['Goa Trip 2026', 'Room Expenses', 'Office Lunch'],
-      note: 'Full Firestore export would be included here in production.',
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'splitease_export.json';
-    a.click();
-    showToast('⬇️', 'Data exported successfully!');
-  }
-
-  // ── Init ──
-  loadSettings();
-</script>
-<script type="module" src="js/auth.js"></script>
 </body>
+
 </html>

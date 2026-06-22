@@ -300,3 +300,37 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
 
 .fade-in  { animation: fadeIn  0.3s ease forwards; }
 .fade-up  { animation: fadeUp  0.35s ease forwards; }
+
+/* ===========================
+   COMPACT MODE
+   Toggled by settings.js via body.compact-mode
+   =========================== */
+body.compact-mode .card              { padding: 12px; }
+body.compact-mode .form-group        { margin-bottom: 12px; }
+body.compact-mode .btn               { height: 40px; padding: 0 16px; }
+body.compact-mode .btn-sm            { height: 34px; padding: 0 13px; }
+body.compact-mode .stat-value        { font-size: 22px; }
+body.compact-mode .stat-card         { gap: 8px; }
+body.compact-mode .stats-grid        { gap: 12px; margin-bottom: 20px; }
+body.compact-mode .main,
+body.compact-mode .main-content      { padding: 16px 20px 28px; }
+body.compact-mode .sidebar           { padding: 18px 14px; }
+body.compact-mode .sidebar-brand     { margin-bottom: 26px; }
+body.compact-mode .nav-item          { padding: 10px 12px; }
+body.compact-mode .topbar            { margin-bottom: 20px; }
+body.compact-mode .groups-grid       { gap: 12px; }
+body.compact-mode .balance-list      { gap: 8px; }
+body.compact-mode .expense-list      { gap: 8px; }
+body.compact-mode .modal-box,
+body.compact-mode .modal-box.danger  { padding: 22px; }
+
+/* ===========================
+   DISABLE ANIMATIONS
+   Toggled by settings.js via body.no-animations
+   =========================== */
+body.no-animations *,
+body.no-animations *::before,
+body.no-animations *::after {
+  transition: none !important;
+  animation: none !important;
+}

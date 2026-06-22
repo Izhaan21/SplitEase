@@ -21,6 +21,16 @@
 </head>
 
 <body>
+<script>
+  /* Apply persisted preferences immediately (before first paint) */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+      if (s['s-compact'])              document.body.classList.add('compact-mode');
+      if (s['s-animations'] === false) document.body.classList.add('no-animations');
+    } catch (e) {}
+  })();
+</script>
 
   <div class="expense-page">
     <div class="expense-layout fade-up">

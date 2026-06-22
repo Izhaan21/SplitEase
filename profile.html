@@ -113,6 +113,16 @@
   </style>
 </head>
 <body>
+<script>
+  /* Apply persisted preferences immediately (before first paint) */
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem('splitease_settings') || '{}');
+      if (s['s-compact'])              document.body.classList.add('compact-mode');
+      if (s['s-animations'] === false) document.body.classList.add('no-animations');
+    } catch (e) {}
+  })();
+</script>
 
 <div class="p-toast" id="p-toast">
   <span id="p-toast-icon">✅</span>
@@ -195,15 +205,15 @@
 
         <div class="profile-stats">
           <div class="profile-stat">
-            <div class="ps-value">3</div>
+            <div class="ps-value" id="ps-groups">—</div>
             <div class="ps-label">Groups</div>
           </div>
           <div class="profile-stat">
-            <div class="ps-value">12</div>
+            <div class="ps-value" id="ps-expenses">—</div>
             <div class="ps-label">Expenses</div>
           </div>
           <div class="profile-stat">
-            <div class="ps-value">₹9.9k</div>
+            <div class="ps-value" id="ps-total">—</div>
             <div class="ps-label">Total</div>
           </div>
         </div>
@@ -215,10 +225,8 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Groups Joined
         </div>
-        <div style="padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 10px;">
-          <span class="badge" style="background: var(--bg-hover); color: var(--light-gray); border: 1px solid var(--border); padding: 8px 14px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--primary-green);display:inline-block;margin-right:6px;"></span>Goa Trip 2026</span>
-          <span class="badge" style="background: var(--bg-hover); color: var(--light-gray); border: 1px solid var(--border); padding: 8px 14px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--primary-green);display:inline-block;margin-right:6px;"></span>Room Expenses</span>
-          <span class="badge" style="background: var(--bg-hover); color: var(--light-gray); border: 1px solid var(--border); padding: 8px 14px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--primary-green);display:inline-block;margin-right:6px;"></span>Office Lunch</span>
+        <div id="groups-badges-container" style="padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 10px;">
+          <!-- Rendered dynamically by profile.js -->
         </div>
       </div>
     </div>
@@ -269,25 +277,9 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Recent Activity
         </div>
-        <div class="activity-row">
-          <div class="activity-icon">💸</div>
-          <div class="activity-text">You added <strong>Dinner at Ocean's</strong> to Goa Trip 2026</div>
-          <div class="activity-time">Yesterday</div>
-        </div>
-        <div class="activity-row">
-          <div class="activity-icon" style="background: rgba(59,130,246,0.1); color: #3B82F6;">🤝</div>
-          <div class="activity-text">You joined <strong>Office Lunch</strong> group</div>
-          <div class="activity-time">3 days ago</div>
-        </div>
-        <div class="activity-row">
-          <div class="activity-icon" style="background: rgba(245,158,11,0.1); color: var(--orange);">💰</div>
-          <div class="activity-text">You paid <strong>₹1,850</strong> to Nadeem</div>
-          <div class="activity-time">5 days ago</div>
-        </div>
-        <div class="activity-row">
-          <div class="activity-icon" style="background: rgba(168,85,247,0.1); color: #A855F7;">➕</div>
-          <div class="activity-text">You created <strong>Goa Trip 2026</strong> group</div>
-          <div class="activity-time">1 week ago</div>
+        <!-- Rendered dynamically by profile.js -->
+        <div id="activity-list">
+          <div style="padding:24px;text-align:center;color:var(--muted-gray);font-size:13px;">Loading activity…</div>
         </div>
       </div>
 
@@ -295,30 +287,7 @@
   </div>
 </main>
 
-<script>
-  function showToast(icon, msg) {
-    const t = document.getElementById('p-toast');
-    document.getElementById('p-toast-icon').textContent = icon;
-    document.getElementById('p-toast-msg').textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
-
-  function saveProfile() {
-    const fname = document.getElementById('inp-fname').value.trim();
-    const lname = document.getElementById('inp-lname').value.trim();
-    const fullName = [fname, lname].filter(Boolean).join(' ');
-    if (fullName) {
-      document.getElementById('profile-display-name').textContent = fullName;
-      document.getElementById('avatar-initials').textContent = fname.charAt(0).toUpperCase();
-    }
-    const btn = document.getElementById('save-profile-btn');
-    btn.textContent = 'Saved ✓';
-    showToast('✅', 'Profile updated successfully!');
-    setTimeout(() => btn.textContent = 'Save Changes', 2000);
-  }
-</script>
-<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/profile.js"></script>
 
 </body>
 </html>

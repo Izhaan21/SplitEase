@@ -596,7 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       if (sessionStorage.getItem('isGuest') === 'true') {
         CURRENT_USER = 'Arif';
-        GROUPS = GUEST_GROUPS;
+        // Use localStorage groups if saved (e.g. after settings danger zone actions),
+        // otherwise fall back to the hardcoded defaults.
+        const savedGroups = localStorage.getItem('splitease_guest_groups');
+        GROUPS = savedGroups ? JSON.parse(savedGroups) : GUEST_GROUPS;
         renderDashboard();
       } else {
         window.location.href = 'index.html';
