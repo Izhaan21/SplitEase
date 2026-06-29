@@ -29,7 +29,7 @@
       .settings-layout { grid-template-columns: 1fr; }
       .settings-sidenav { display: flex; flex-wrap: wrap; gap: 8px; }
       .settings-nav-item { flex: 1; border-left: none !important; border-bottom: 3px solid transparent; justify-content: center; padding: 12px; }
-      .settings-nav-item.active { border-bottom-color: var(--primary-green) !important; border-left-color: transparent !important; }
+      .settings-nav-item.active { border-bottom-color: var(--primary) !important; border-left-color: transparent !important; }
     }
 
     /* ── Side navigation ── */
@@ -48,11 +48,11 @@
       cursor: pointer;
       user-select: none;
     }
-    .settings-nav-item:hover { background: var(--bg-hover); color: var(--white); }
+    .settings-nav-item:hover { background: var(--surface-elevated); color: var(--white); }
     .settings-nav-item.active {
-      color: var(--primary-green);
-      border-left-color: var(--primary-green);
-      background: rgba(34,197,94,0.08);
+      color: var(--primary);
+      border-left-color: var(--primary);
+      background: rgba(252,213,53,0.08);
       font-weight: 600;
     }
     .settings-nav-item.danger-nav { color: #f87171; }
@@ -113,8 +113,8 @@
       transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease;
       box-shadow: var(--shadow-sm);
     }
-    .toggle input:checked ~ .toggle-track { background: var(--primary-green); border-color: var(--primary-green); }
-    .toggle input:checked ~ .toggle-thumb { transform: translateX(20px); background: var(--bg-primary); }
+    .toggle input:checked ~ .toggle-track { background: var(--primary); border-color: var(--primary); }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(20px); background: var(--on-primary); }
 
     /* ── Save bar at bottom ── */
     .save-bar {
@@ -130,7 +130,7 @@
       position: fixed; bottom: 32px; right: 32px;
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-left: 4px solid var(--primary-green);
+      border-left: 4px solid var(--primary);
       border-radius: var(--radius-md);
       padding: 16px 20px;
       font-size: 14px; font-weight: 500; color: var(--white);
@@ -171,7 +171,7 @@
 
     /* Danger modal */
     .modal-box.danger .modal-title { color: var(--red); }
-    .modal-box.danger { border-color: rgba(239,68,68,0.4); box-shadow: var(--shadow-glow-red); }
+    .modal-box.danger { border-color: rgba(246,70,93,0.4); }
     .modal-warning-icon { font-size: 48px; text-align: center; margin-bottom: 16px; }
 
   </style>
@@ -236,16 +236,11 @@
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 2L3 9.5V22.5L16 30L29 22.5V9.5L16 2Z" stroke="url(#sb-lg-s)" stroke-width="2.5" stroke-linejoin="round"/>
-      <line x1="16" y1="8" x2="16" y2="24" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round"/>
-      <polyline points="10,13 16,16 22,13" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="10,19 16,22 22,19" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <defs>
-        <linearGradient id="sb-lg-s" x1="3" y1="2" x2="29" y2="30" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#22C55E"/><stop offset="1" stop-color="#F59E0B"/>
-        </linearGradient>
-      </defs>
+    <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 2L3 9.5V22.5L16 30L29 22.5V9.5L16 2Z" stroke="#FCD535" stroke-width="2.5" stroke-linejoin="round"/>
+      <line x1="16" y1="8" x2="16" y2="24" stroke="#FCD535" stroke-width="2.5" stroke-linecap="round"/>
+      <polyline points="10,13 16,16 22,13" stroke="#FCD535" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="10,19 16,22 22,19" stroke="#FCD535" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <span class="brand-name">Split<span>Ease</span></span>
   </div>

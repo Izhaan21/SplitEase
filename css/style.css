@@ -1,40 +1,80 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap');
 
 /* ===========================
    CSS CUSTOM PROPERTIES
    =========================== */
 :root {
-  /* Background Colors */
-  --bg-primary:   #0F1117;
-  --bg-secondary: #151922;
-  --bg-card:      #1A1F2B;
-  --bg-hover:     #242A38;
-  --border:       #2D3445;
+  /* ── Canvas (dark default) ── */
+  --canvas-dark:          #0b0e11;
+  --surface-card:         #1e2329;
+  --surface-elevated:     #2b3139;
 
-  /* Accent Colors */
-  --primary-green: #22C55E;
-  --success-green: #16A34A;
-  --orange:        #F59E0B;
-  --red:           #EF4444;
-  --white:         #FFFFFF;
-  --light-gray:    #9CA3AF;
-  --muted-gray:    #6B7280;
+  /* Legacy aliases (keep for backward compat with HTML inline styles) */
+  --bg-primary:           #0b0e11;
+  --bg-secondary:         #1e2329;
+  --bg-card:              #1e2329;
+  --bg-hover:             #2b3139;
 
-  /* Shadows */
-  --shadow-sm:         0 2px 4px rgba(0,0,0,0.15);
-  --shadow-md:         0 4px 12px rgba(0,0,0,0.25);
-  --shadow-lg:         0 10px 30px rgba(0,0,0,0.4);
-  --shadow-glow-green: 0 0 20px rgba(34,197,94,0.25);
-  --shadow-glow-orange:0 0 20px rgba(245,158,11,0.2);
-  --shadow-glow-red:   0 0 20px rgba(239,68,68,0.2);
+  /* ── Hairlines ── */
+  --hairline:             #2b3139;
+  --border:               #2b3139;
+  --border-strong:        #474d57;
 
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  /* ── Brand Accent — Binance Yellow ── */
+  --primary:              #FCD535;
+  --primary-active:       #f0b90b;
+  --primary-disabled:     #3a3a1f;
+  --on-primary:           #181a20;   /* black text on yellow */
 
-  /* Transition */
-  --transition: 0.25s ease;
+  /* Legacy green alias — kept so JS-generated HTML still works */
+  --primary-green:        #FCD535;
+  --success-green:        #0ecb81;
+
+  /* ── Finance Semantics ── */
+  --trading-up:           #0ecb81;   /* positive / owed to you */
+  --trading-down:         #f6465d;   /* negative / you owe */
+  --orange:               #f0b90b;   /* secondary warning */
+  --red:                  #f6465d;
+
+  /* ── Text ── */
+  --ink:                  #181a20;
+  --white:                #ffffff;
+  --body:                 #eaecef;   /* body text on dark */
+  --muted-strong:         #929aa5;
+  --muted-gray:           #707a8a;
+  --light-gray:           #eaecef;
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.5);
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 2px rgba(252,213,53,0.45);
+
+  /* Legacy glow aliases — replaced by focus-ring; kept for JS markup */
+  --shadow-glow-green:  0 0 0 2px rgba(252,213,53,0.35);
+  --shadow-glow-orange: 0 0 0 2px rgba(240,185,11,0.35);
+  --shadow-glow-red:    0 0 0 2px rgba(246,70,93,0.35);
+
+  /* ── Border Radius (tight Binance scale) ── */
+  --radius-xs: 2px;
+  --radius-sm: 6px;    /* buttons */
+  --radius-md: 8px;    /* inputs, cards */
+  --radius-lg: 12px;   /* elevated containers, modals */
+  --radius-pill: 9999px;
+
+  /* ── Spacing ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-xxl: 48px;
+  --space-section: 80px;
+
+  /* ── Transition ── */
+  --transition: 0.2s ease;
 }
 
 /* ===========================
@@ -52,12 +92,12 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--white);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--canvas-dark);
+  color: var(--body);
   min-height: 100vh;
   overflow-x: hidden;
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -74,31 +114,41 @@ input, select, textarea { font-family: inherit; }
 /* ===========================
    TYPOGRAPHY
    =========================== */
-h1 { font-size: 32px; font-weight: 700; color: var(--white); line-height: 1.2; }
-h2 { font-size: 24px; font-weight: 600; color: var(--white); line-height: 1.3; }
-h3 { font-size: 18px; font-weight: 600; color: var(--white); line-height: 1.4; }
+/* Numeric / financial display — IBM Plex Mono substitute for BinancePlex */
+.num, .stat-value, .balance-amount, .expense-amount,
+.amount-prefix, .form-input-amount, .per-person-amount {
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+h1 { font-size: 32px; font-weight: 700; color: var(--white); line-height: 1.1; letter-spacing: -0.5px; }
+h2 { font-size: 24px; font-weight: 600; color: var(--white); line-height: 1.2; }
+h3 { font-size: 18px; font-weight: 600; color: var(--white); line-height: 1.3; }
 h4 { font-size: 16px; font-weight: 600; color: var(--white); }
 
-p, span, label { font-size: 14px; color: var(--light-gray); }
+p, span, label { font-size: 14px; color: var(--body); }
 small, .text-xs { font-size: 12px; color: var(--muted-gray); }
 
-.text-green  { color: var(--primary-green) !important; }
-.text-orange { color: var(--orange) !important; }
-.text-red    { color: var(--red) !important; }
-.text-white  { color: var(--white) !important; }
-.text-muted  { color: var(--muted-gray) !important; }
+/* Utility colors */
+.text-yellow  { color: var(--primary) !important; }
+.text-green   { color: var(--trading-up) !important; }
+.text-red     { color: var(--trading-down) !important; }
+.text-orange  { color: var(--orange) !important; }
+.text-white   { color: var(--white) !important; }
+.text-muted   { color: var(--muted-gray) !important; }
+/* Legacy alias */
+.text-green-old { color: var(--primary) !important; }
 
-.font-medium { font-weight: 500; }
+.font-medium   { font-weight: 500; }
 .font-semibold { font-weight: 600; }
-.font-bold { font-weight: 700; }
+.font-bold     { font-weight: 700; }
 
 /* ===========================
    SCROLLBAR
    =========================== */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-primary); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--bg-hover); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--canvas-dark); }
+::-webkit-scrollbar-thumb { background: var(--surface-elevated); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
 /* ===========================
    BUTTONS
@@ -108,73 +158,94 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 48px;
+  height: 40px;
   padding: 0 24px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
-  transition: filter var(--transition), transform var(--transition), box-shadow var(--transition);
+  line-height: 1;
+  transition: filter var(--transition), transform var(--transition), background var(--transition);
   user-select: none;
   white-space: nowrap;
 }
 
 .btn:active { transform: scale(0.97); }
 
+/* Primary — Yellow + Black (Binance signature) */
 .btn-primary {
-  background-color: var(--primary-green);
-  color: var(--bg-primary);
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border-radius: var(--radius-sm);
 }
-.btn-primary:hover {
-  filter: brightness(1.1);
-  box-shadow: var(--shadow-glow-green);
+.btn-primary:hover { background-color: var(--primary-active); }
+.btn-primary:disabled,
+.btn-primary.disabled {
+  background-color: var(--primary-disabled);
+  color: var(--muted-gray);
+  cursor: not-allowed;
 }
 
+/* Primary Pill — for hero CTA moments */
+.btn-primary-pill {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  border-radius: var(--radius-pill);
+  height: 44px;
+  padding: 0 32px;
+  font-weight: 700;
+}
+.btn-primary-pill:hover { background-color: var(--primary-active); }
+
+/* Secondary — dark surface */
 .btn-secondary {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-card);
   color: var(--white);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
 }
 .btn-secondary:hover {
-  background-color: var(--border);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-strong);
 }
 
+/* Danger */
 .btn-danger {
-  background-color: var(--red);
+  background-color: var(--trading-down);
   color: var(--white);
+  border-radius: var(--radius-sm);
 }
-.btn-danger:hover {
-  filter: brightness(1.1);
-  box-shadow: var(--shadow-glow-red);
-}
+.btn-danger:hover { filter: brightness(1.1); }
 
+/* Ghost */
 .btn-ghost {
   background-color: transparent;
-  color: var(--light-gray);
-  border: 1px solid var(--border);
+  color: var(--body);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
 }
 .btn-ghost:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--surface-card);
   color: var(--white);
 }
 
+/* Google auth */
 .btn-google {
-  background-color: transparent;
+  background-color: var(--surface-card);
   color: var(--white);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hairline);
   gap: 12px;
+  border-radius: var(--radius-sm);
 }
 .btn-google:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--light-gray);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-strong);
 }
-.btn-google svg {
-  flex-shrink: 0;
-}
+.btn-google svg { flex-shrink: 0; }
 
+/* Size modifiers */
 .btn-full { width: 100%; }
-.btn-sm { height: 38px; padding: 0 16px; font-size: 13px; border-radius: var(--radius-sm); }
+.btn-sm   { height: 32px; padding: 0 14px; font-size: 13px; border-radius: var(--radius-sm); }
 .btn-icon { width: 40px; height: 40px; padding: 0; }
 
 /* ===========================
@@ -183,24 +254,24 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 16px;
 }
 
 .form-label {
   font-size: 13px;
   font-weight: 500;
-  color: var(--light-gray);
+  color: var(--muted-strong);
 }
 
 .form-input,
 .form-select,
 .form-textarea {
   width: 100%;
-  height: 48px;
-  padding: 0 16px;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border);
+  height: 40px;
+  padding: 0 14px;
+  background-color: var(--surface-card);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   color: var(--white);
   font-size: 14px;
@@ -209,8 +280,8 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
 }
 
 .form-textarea {
-  height: 100px;
-  padding: 12px 16px;
+  height: 96px;
+  padding: 10px 14px;
   resize: none;
 }
 
@@ -222,23 +293,23 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
 .form-input:focus,
 .form-select:focus,
 .form-textarea:focus {
-  border-color: var(--primary-green);
-  box-shadow: var(--shadow-glow-green);
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
 }
 
 /* Validation error state */
 .field-error,
 .field-error:focus {
-  border-color: #EF4444 !important;
-  box-shadow: 0 0 0 3px rgba(239,68,68,0.18) !important;
+  border-color: var(--trading-down) !important;
+  box-shadow: 0 0 0 2px rgba(246,70,93,0.25) !important;
 }
 
 .form-select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236B7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23707a8a' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 40px;
+  background-position: right 12px center;
+  padding-right: 38px;
   cursor: pointer;
 }
 
@@ -246,20 +317,18 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
    CARDS
    =========================== */
 .card {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border);
+  background-color: var(--surface-card);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius-lg);
   padding: 20px;
-  box-shadow: var(--shadow-md);
 }
 
 .card-hover {
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  transition: border-color var(--transition), background var(--transition);
 }
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(45,52,69,0.8);
+  border-color: var(--border-strong);
+  background: var(--surface-elevated);
 }
 
 /* ===========================
@@ -269,34 +338,34 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  border-radius: 99px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .badge-success {
-  background-color: rgba(34,197,94,0.12);
-  color: var(--primary-green);
+  background-color: rgba(12,203,129,0.12);
+  color: var(--trading-up);
 }
 .badge-pending {
-  background-color: rgba(245,158,11,0.12);
-  color: var(--orange);
+  background-color: rgba(252,213,53,0.12);
+  color: var(--primary);
 }
 .badge-danger {
-  background-color: rgba(239,68,68,0.12);
-  color: var(--red);
+  background-color: rgba(246,70,93,0.12);
+  color: var(--trading-down);
 }
 .badge-neutral {
-  background-color: rgba(107,114,128,0.15);
-  color: var(--light-gray);
+  background-color: rgba(112,122,138,0.15);
+  color: var(--muted-strong);
 }
 
 /* ===========================
    ANIMATIONS
    =========================== */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -305,35 +374,33 @@ small, .text-xs { font-size: 12px; color: var(--muted-gray); }
   to   { opacity: 1; }
 }
 
-.fade-in  { animation: fadeIn  0.3s ease forwards; }
-.fade-up  { animation: fadeUp  0.35s ease forwards; }
+.fade-in { animation: fadeIn  0.25s ease forwards; }
+.fade-up { animation: fadeUp  0.3s ease forwards; }
 
 /* ===========================
    COMPACT MODE
-   Toggled by settings.js via body.compact-mode
    =========================== */
 body.compact-mode .card              { padding: 12px; }
-body.compact-mode .form-group        { margin-bottom: 12px; }
-body.compact-mode .btn               { height: 40px; padding: 0 16px; }
-body.compact-mode .btn-sm            { height: 34px; padding: 0 13px; }
-body.compact-mode .stat-value        { font-size: 22px; }
+body.compact-mode .form-group        { margin-bottom: 10px; }
+body.compact-mode .btn               { height: 34px; padding: 0 14px; }
+body.compact-mode .btn-sm            { height: 28px; padding: 0 11px; }
+body.compact-mode .stat-value        { font-size: 20px; }
 body.compact-mode .stat-card         { gap: 8px; }
 body.compact-mode .stats-grid        { gap: 12px; margin-bottom: 20px; }
 body.compact-mode .main,
-body.compact-mode .main-content      { padding: 16px 20px 28px; }
-body.compact-mode .sidebar           { padding: 18px 14px; }
-body.compact-mode .sidebar-brand     { margin-bottom: 26px; }
-body.compact-mode .nav-item          { padding: 10px 12px; }
-body.compact-mode .topbar            { margin-bottom: 20px; }
+body.compact-mode .main-content      { padding: 14px 18px 24px; }
+body.compact-mode .sidebar           { padding: 16px 14px; }
+body.compact-mode .sidebar-brand     { margin-bottom: 22px; }
+body.compact-mode .nav-item          { padding: 9px 12px; }
+body.compact-mode .topbar            { margin-bottom: 18px; }
 body.compact-mode .groups-grid       { gap: 12px; }
-body.compact-mode .balance-list      { gap: 8px; }
-body.compact-mode .expense-list      { gap: 8px; }
+body.compact-mode .balance-list      { gap: 6px; }
+body.compact-mode .expense-list      { gap: 6px; }
 body.compact-mode .modal-box,
-body.compact-mode .modal-box.danger  { padding: 22px; }
+body.compact-mode .modal-box.danger  { padding: 20px; }
 
 /* ===========================
    DISABLE ANIMATIONS
-   Toggled by settings.js via body.no-animations
    =========================== */
 body.no-animations *,
 body.no-animations *::before,
